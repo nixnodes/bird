@@ -42,10 +42,13 @@
 #include "nest/route.h"
 #include "nest/cli.h"
 #include "conf/conf.h"
+#include "filter/filter.h"
 #include "lib/string.h"
 #include "lib/alloca.h"
 
 #include "static.h"
+
+static linpool *static_lp;
 
 static inline rtable *
 p_igp_table(struct proto *p)
@@ -54,12 +57,11 @@ p_igp_table(struct proto *p)
   return cf->igp_table ? cf->igp_table->table : p->table;
 }
 
-
 static void
 static_install(struct proto *p, struct static_route *r, struct iface *ifa)
 {
   net *n;
-  rta a, *aa;
+  rta a;
   rte *e;
 
   if (r->installed > 0)
@@ -108,13 +110,21 @@ static_install(struct proto *p, struct static_route *r, struct iface *ifa)
   if (r->dest == RTDX_RECURSIVE)
     rta_set_recursive_next_hop(p->table, &a, p_igp_table(p), &r->via, &r->via);
 
-  aa = rta_lookup(&a);
+  /* We skip rta_lookup() here */
+
   n = net_get(p->table, r->net, r->masklen);
-  e = rte_get_temp(aa);
+  e = rte_get_temp(&a);
   e->net = n;
   e->pflags = 0;
+
+  if (r->cmds)
+    f_eval_rte(r->cmds, &e, static_lp);
+
   rte_update(p, n, e);
   r->installed = 1;
+
+  if (r->cmds)
+    lp_flush(static_lp);
 }
 
 static void
@@ -219,6 +229,9 @@ static_start(struct proto *p)
   struct static_route *r;
 
   DBG("Static: take off!\n");
+
+  if (!static_lp)
+    static_lp = lp_new(&root_pool, 1008);
 
   if (cf->igp_table)
     rt_lock_table(cf->igp_table->table);
@@ -442,7 +455,7 @@ static_match(struct proto *p, struct static_route *r, struct static_config *n)
 
  found:
   /* If destination is different, force reinstall */
-  if ((r->installed > 0) && !static_same_dest(r, t))
+  if ((r->installed > 0) && !static_same_rte(r, t))
     t->installed = -1;
   else
     t->installed = r->installed;
