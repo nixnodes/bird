@@ -13,8 +13,13 @@ CF_HDR
 CF_DEFINES
 
 #define BGP_CFG ((struct bgp_config *) this_proto)
+#define BGP_HOOK_PARSEOPT(a,b,c){if(c){BGP_CFG->hc.hooks[a].ac|=BGP_HOOK_F_ASYNC;}BGP_CFG->hc.hooks[a].exec=b;}
 
 CF_DECLS
+	
+CF_KEYWORDS(HOOK, AHOOK, ESTABLISHED, ENTER, INIT, DOWN,
+	LEAVE, CLOSE, IDLE, OPENCONFIRM, CHANGE, CONNECTED, 
+	SHUTDOWN, GREST, CONN, INBOUND, OUTBOUND, FEED, TIMEOUT)
 
 CF_KEYWORDS(BGP, LOCAL, NEIGHBOR, AS, HOLD, TIME, CONNECT, RETRY,
 	KEEPALIVE, MULTIHOP, STARTUP, VIA, NEXT, HOP, SELF, DEFAULT,
@@ -111,6 +116,46 @@ bgp_proto:
  | bgp_proto CAPABILITIES bool ';' { BGP_CFG->capabilities = $3; }
  | bgp_proto ADVERTISE IPV4 bool ';' { BGP_CFG->advertise_ipv4 = $4; }
  | bgp_proto PASSWORD text ';' { BGP_CFG->password = $3; }
+ | bgp_proto HOOK ESTABLISHED ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_ESTABLISHED, $5, 0 ); }
+ | bgp_proto HOOK ESTABLISHED LEAVE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_LEAVE_ESTABLISHED, $5, 0 ); }
+ | bgp_proto HOOK CLOSE ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_CLOSE, $5, 0 ); }
+ | bgp_proto HOOK IDLE ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_IDLE, $5, 0 ); }
+ | bgp_proto HOOK OPENCONFIRM ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_OPENCONFIRM, $5, 0 ); }
+ | bgp_proto HOOK CHANGE STATE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CHANGE_STATE, $5, 0 ); }
+ | bgp_proto HOOK REFRESH START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_REFRESH_BEGIN, $5, 0 ); }
+ | bgp_proto HOOK REFRESH END text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_REFRESH_END, $5, 0 ); }
+ | bgp_proto HOOK INIT text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_INIT, $4, 0 ); }
+ | bgp_proto HOOK START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_START, $4, 0 ); }
+ | bgp_proto HOOK DOWN text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_DOWN, $4, 0 ); }
+ | bgp_proto HOOK SHUTDOWN text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_SHUTDOWN, $4, 0 ); } 
+ | bgp_proto HOOK NEIGHBOR GREST text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_NEIGH_GRESTART, $5, 0 ); } 
+ | bgp_proto HOOK NEIGHBOR START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_NEIGH_START, $5, 0 ); } 
+ | bgp_proto HOOK CONN INBOUND text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CONN_INBOUND, $5, 0 ); } 
+ | bgp_proto HOOK CONN OUTBOUND text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CONN_OUTBOUND, $5, 0 ); }
+ | bgp_proto HOOK CONN TIMEOUT text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CONN_TIMEOUT, $5, 0 ); }
+ | bgp_proto HOOK FEED START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_FEED_BEGIN, $5, 0 ); } 
+ | bgp_proto HOOK FEED END text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_FEED_END, $5, 0 ); } 
+ | bgp_proto HOOK KEEPALIVE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_KEEPALIVE, $4, 0 ); } 
+ | bgp_proto AHOOK ESTABLISHED ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_ESTABLISHED, $5, 1 ); }
+ | bgp_proto AHOOK ESTABLISHED LEAVE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_LEAVE_ESTABLISHED, $5, 1 ); }
+ | bgp_proto AHOOK CLOSE ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_CLOSE, $5, 1 ); }
+ | bgp_proto AHOOK IDLE ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_IDLE, $5, 1 ); }
+ | bgp_proto AHOOK OPENCONFIRM ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_OPENCONFIRM, $5, 1 ); }
+ | bgp_proto AHOOK CHANGE STATE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CHANGE_STATE, $5, 1 ); }
+ | bgp_proto AHOOK REFRESH START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_REFRESH_BEGIN, $5, 1 ); }
+ | bgp_proto AHOOK REFRESH END text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_REFRESH_END, $5, 1 ); }
+ | bgp_proto AHOOK INIT text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_INIT, $4, 1 ); }
+ | bgp_proto AHOOK START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_START, $4, 1 ); }
+ | bgp_proto AHOOK DOWN text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_DOWN, $4, 1 ); } 
+ | bgp_proto AHOOK SHUTDOWN text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_SHUTDOWN, $4, 1 ); } 
+ | bgp_proto AHOOK NEIGHBOR GREST text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_NEIGH_GRESTART, $5, 1 ); } 
+ | bgp_proto AHOOK NEIGHBOR START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_NEIGH_START, $5, 1 ); } 
+ | bgp_proto AHOOK CONN INBOUND text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CONN_INBOUND, $5, 1 ); } 
+ | bgp_proto AHOOK CONN OUTBOUND text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CONN_OUTBOUND, $5, 1 ); }
+ | bgp_proto AHOOK CONN TIMEOUT text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_CONN_TIMEOUT, $5, 1 ); }
+ | bgp_proto AHOOK FEED START text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_FEED_BEGIN, $5, 1 ); } 
+ | bgp_proto AHOOK FEED END text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_FEED_END, $5, 1 ); } 
+ | bgp_proto AHOOK KEEPALIVE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_KEEPALIVE, $4, 1 ); } 
  | bgp_proto ROUTE LIMIT expr ';' {
      this_proto->in_limit = cfg_allocz(sizeof(struct proto_limit));
      this_proto->in_limit->limit = $4;

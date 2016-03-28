@@ -479,6 +479,9 @@ cli_init_unix(uid_t use_uid, gid_t use_gid)
 
   if (chmod(path_control_socket, 0660) < 0)
     die("chmod: %m");
+
+  setenv("PATH_CONTROL_SOCKET", path_control_socket, 1);
+  setenv("PATH_CONFIG_NAME", config_name, 1);
 }
 
 /*

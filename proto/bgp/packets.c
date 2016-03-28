@@ -21,7 +21,7 @@
 #include "nest/cli.h"
 
 #include "bgp.h"
-
+#include "hook.h"
 
 #define BGP_RR_REQUEST		0
 #define BGP_RR_BEGIN		1
@@ -1560,6 +1560,7 @@ bgp_rx_keepalive(struct bgp_conn *conn)
   struct bgp_proto *p = conn->bgp;
 
   BGP_TRACE(D_PACKETS, "Got KEEPALIVE");
+  bgp_hook_run (BGP_HOOK_KEEPALIVE, p);
   bgp_start_timer(conn->hold_timer, conn->hold_time);
   switch (conn->state)
     {

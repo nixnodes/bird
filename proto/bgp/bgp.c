@@ -77,7 +77,7 @@
 #include "lib/string.h"
 
 #include "bgp.h"
-
+#include "hook.h"
 
 struct linpool *bgp_linpool;		/* Global temporary pool */
 static sock *bgp_listen_sk;		/* Global listening socket */
@@ -146,6 +146,8 @@ bgp_startup(struct bgp_proto *p)
 
   if (!p->cf->passive)
     bgp_active(p);
+
+  bgp_hook_run (BGP_HOOK_START, p);
 }
 
 static void
@@ -317,6 +319,8 @@ bgp_down(struct bgp_proto *p)
 
   BGP_TRACE(D_EVENTS, "Down");
   proto_notify_state(&p->p, PS_DOWN);
+
+  bgp_hook_run (BGP_HOOK_DOWN, p);
 }
 
 static void
@@ -353,6 +357,8 @@ bgp_conn_set_state(struct bgp_conn *conn, unsigned new_state)
     mrt_dump_bgp_state_change(conn, conn->state, new_state);
 
   conn->state = new_state;
+
+  bgp_hook_run(BGP_HOOK_CHANGE_STATE, conn->bgp);
 }
 
 void
@@ -360,6 +366,9 @@ bgp_conn_enter_openconfirm_state(struct bgp_conn *conn)
 {
   /* Really, most of the work is done in bgp_rx_open(). */
   bgp_conn_set_state(conn, BS_OPENCONFIRM);
+
+  if (bgp_hook_run (BGP_HOOK_ENTER_OPENCONFIRM, conn->bgp) & BGP_HOOK_STATUS_BAD)
+     bgp_stop(conn->bgp, 0);
 }
 
 void
@@ -404,16 +413,24 @@ bgp_conn_enter_established_state(struct bgp_conn *conn)
 
   bgp_conn_set_state(conn, BS_ESTABLISHED);
   proto_notify_state(&p->p, PS_UP);
+
+  if (bgp_hook_run (BGP_HOOK_ENTER_ESTABLISHED, p) & BGP_HOOK_STATUS_BAD)
+    bgp_stop(p, 0);
+
 }
 
 static void
 bgp_conn_leave_established_state(struct bgp_proto *p)
 {
   BGP_TRACE(D_EVENTS, "BGP session closed");
+
+  bgp_hook_run(BGP_HOOK_LEAVE_ESTABLISHED, p);
+
   p->conn = NULL;
 
   if (p->p.proto_state == PS_UP)
     bgp_stop(p, 0);
+
 }
 
 void
@@ -431,6 +448,8 @@ bgp_conn_enter_close_state(struct bgp_conn *conn)
 
   if (os == BS_ESTABLISHED)
     bgp_conn_leave_established_state(p);
+
+  bgp_hook_run(BGP_HOOK_ENTER_CLOSE, p);
 }
 
 void
@@ -445,6 +464,8 @@ bgp_conn_enter_idle_state(struct bgp_conn *conn)
 
   if (os == BS_ESTABLISHED)
     bgp_conn_leave_established_state(p);
+
+  bgp_hook_run(BGP_HOOK_ENTER_IDLE, p);
 }
 
 /**
@@ -470,9 +491,12 @@ bgp_handle_graceful_restart(struct bgp_proto *p)
   if (p->gr_active)
     rt_refresh_end(p->p.main_ahook->table, p->p.main_ahook);
 
+  bgp_hook_run(BGP_HOOK_NEIGH_GRESTART, p);
+
   p->gr_active = 1;
   bgp_start_timer(p->gr_timer, p->conn->peer_gr_time);
   rt_refresh_begin(p->p.main_ahook->table, p->p.main_ahook);
+
 }
 
 /**
@@ -531,6 +555,8 @@ bgp_refresh_begin(struct bgp_proto *p)
 
   p->load_state = BFS_REFRESHING;
   rt_refresh_begin(p->p.main_ahook->table, p->p.main_ahook);
+
+  bgp_hook_run(BGP_HOOK_REFRESH_BEGIN, p);
 }
 
 /**
@@ -550,6 +576,8 @@ bgp_refresh_end(struct bgp_proto *p)
 
   p->load_state = BFS_NONE;
   rt_refresh_end(p->p.main_ahook->table, p->p.main_ahook);
+
+  bgp_hook_run(BGP_HOOK_REFRESH_END, p);
 }
 
 
@@ -587,6 +615,9 @@ bgp_connected(sock *sk)
 
   BGP_TRACE(D_EVENTS, "Connected");
   bgp_send_open(conn);
+
+  if (bgp_hook_run (BGP_HOOK_CONN_OUTBOUND, p) & BGP_HOOK_STATUS_BAD)
+    bgp_stop(conn->bgp, 0);
 }
 
 static void
@@ -596,6 +627,9 @@ bgp_connect_timeout(timer *t)
   struct bgp_proto *p = conn->bgp;
 
   DBG("BGP: connect_timeout\n");
+
+  bgp_hook_run (BGP_HOOK_CONN_TIMEOUT, p);
+
   if (p->p.proto_state == PS_START)
     {
       bgp_close_conn(conn);
@@ -834,6 +868,13 @@ bgp_incoming_connection(sock *sk, int dummy UNUSED)
       return 0;
     }
 
+  if ( bgp_hook_run(BGP_HOOK_CONN_INBOUND, p) & BGP_HOOK_STATUS_BAD )
+    {
+      log(L_ERR "%s: hook: child process aborted inbound connection", p->p.name);
+      rfree(sk);
+      return 0;
+    }
+
   hops = p->cf->multihop ? : 1;
 
   if (sk_set_ttl(sk, p->cf->ttl_security ? 255 : hops) < 0)
@@ -918,7 +959,8 @@ bgp_start_neighbor(struct bgp_proto *p)
   }
 #endif
 
-  bgp_initiate(p);
+  if ( bgp_hook_run(BGP_HOOK_NEIGH_START, p) != 2 )
+    bgp_initiate(p);
 }
 
 static void
@@ -1030,6 +1072,8 @@ bgp_feed_begin(struct proto *P, int initial)
 
       p->feed_state = BFS_REFRESHING;
       bgp_schedule_packet(p->conn, PKT_BEGIN_REFRESH);
+
+      bgp_hook_run(BGP_HOOK_FEED_BEGIN, p);
     }
 }
 
@@ -1056,6 +1100,8 @@ bgp_feed_end(struct proto *P)
 
   /* Kick TX hook */
   bgp_schedule_packet(p->conn, PKT_UPDATE);
+
+  bgp_hook_run(BGP_HOOK_FEED_END, p);
 }
 
 
@@ -1168,6 +1214,8 @@ bgp_shutdown(struct proto *P)
 
   BGP_TRACE(D_EVENTS, "Shutdown requested");
 
+  bgp_hook_run (BGP_HOOK_SHUTDOWN, p);
+
   switch (P->down_code)
     {
     case PDC_CF_REMOVE:
@@ -1253,6 +1301,10 @@ bgp_init(struct proto_config *C)
   p->rr_client = c->rr_client;
   p->igp_table = get_igp_table(c);
 
+  bgp_parse_hooks (p);
+
+  bgp_hook_run(BGP_HOOK_INIT, p);
+
   return P;
 }
 
@@ -1329,6 +1381,9 @@ bgp_check_config(struct bgp_config *c)
 
   if (c->secondary && !c->c.table->sorted)
     cf_error("BGP with secondary option requires sorted table");
+
+  if (bgp_check_hooks(c))
+    cf_error("One or more BGP hooks failed");
 }
 
 static int
@@ -1355,6 +1410,8 @@ bgp_reconfigure(struct proto *P, struct proto_config *C)
   /* We should update our copy of configuration ptr as old configuration will be freed */
   if (same)
     p->cf = new;
+
+  bgp_parse_hooks (p);
 
   return same;
 }

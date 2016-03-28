@@ -1,0 +1,51 @@
+#!/bin/sh
+
+#BIRDC=birdc
+
+CONFBASE=`dirname ${PATH_CONFIG_NAME}`
+
+[[ "${CONFBASE}" = "." ]] && CONFBASE=${PWD}
+
+CONFPATH=${CONFBASE}/bird.conf.d
+
+[ -d ${CONFPATH} ] || {
+	mkdir -p ${CONFPATH} || exit 2
+}
+
+VARP="${CONFPATH}/`basename ${0}`"
+
+INJECTOR=${VARP}/_hook
+
+[ -d ${VARP} ] || {
+	mkdir -p ${VARP} || exit 1 
+}
+
+[ -f ${INJECTOR} ] || {
+	touch ${INJECTOR} || exit 1
+}
+
+remove_config_chunk()
+{
+	sed -ri "/^include \".*\/${1}\";/d" ${INJECTOR}
+}
+
+insert_config_chunk()
+{
+	[ -z "${1}" ] && return
+	cpath="${VARP}/${1}"	
+	cat ${cpath} | egrep -q "^include \".*\/${1}\";" && return 1	
+	remove_config_chunk "${1}"
+	echo "include \"${cpath}\";" >> ${INJECTOR}
+	return 0
+}
+
+set_rstatus()
+{
+	(( R |= ${1} ))
+	echo ${R}
+}
+
+_exit()
+{
+	exit `set_rstatus ${1}`
+}
