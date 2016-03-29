@@ -36,7 +36,9 @@ char *bgp_hook_strings[BGP_MAX_HOOKS] =
 	  ] = "BGP_HOOK_NEIGH_START", [BGP_HOOK_CONN_INBOUND
 	  ] = "BGP_HOOK_CONN_INBOUND", [BGP_HOOK_FEED_BEGIN
 	  ] = "BGP_HOOK_FEED_BEGIN", [BGP_HOOK_FEED_END ] = "BGP_HOOK_FEED_END",
-      [BGP_HOOK_KEEPALIVE] = "BGP_HOOK_KEEPALIVE" };
+      [BGP_HOOK_KEEPALIVE] = "BGP_HOOK_KEEPALIVE", [BGP_HOOK_RECONFIGURE
+	  ] = "BGP_HOOK_RECONFIGURE", [BGP_HOOK_CONN_TIMEOUT
+	  ] = "BGP_HOOK_CONN_TIMEOUT" };
 
 #ifdef IPV6
 #define SETENV_IPTOSTR(a,c){u16*ip=(u16*)c;snprintf(b, sizeof(b),"%x:%x:%x:%x:%x:%x:%x:%x",ip[1],ip[0],ip[3],ip[2],ip[5],ip[4],ip[7],ip[6]);setenv(a,b,1);}

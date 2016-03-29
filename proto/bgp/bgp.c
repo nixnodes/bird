@@ -1413,6 +1413,9 @@ bgp_reconfigure(struct proto *P, struct proto_config *C)
 
   bgp_parse_hooks (p);
 
+  if (bgp_hook_run (BGP_HOOK_RECONFIGURE, p) & BGP_HOOK_STATUS_BAD)
+      bgp_stop(p, 0);
+
   return same;
 }
 

@@ -49,6 +49,7 @@ struct bgp_hook_config
 #define BGP_HOOK_NEIGH_START		0x12
 #define BGP_HOOK_CONN_TIMEOUT		0x13
 #define BGP_HOOK_KEEPALIVE		0x14
+#define BGP_HOOK_RECONFIGURE		0x15
 
 char *bgp_hook_strings[BGP_MAX_HOOKS];
 
