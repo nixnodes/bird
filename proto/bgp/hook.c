@@ -90,7 +90,7 @@ bgp_check_hooks (void *C)
   struct bgp_config *c = (struct bgp_config *) C;
 
   int index;
-  int r = 0;
+  int r = 0, t;
 
   for (index = 1; index < BGP_MAX_HOOKS; index++)
     {
@@ -100,10 +100,9 @@ bgp_check_hooks (void *C)
 	  continue;
 	}
 
-      int t;
       r += (t = access (h->exec, R_OK | X_OK));
 
-      if (t)
+      if (t == -1)
 	{
 	  ERRNO_STRING
 	  log (L_ERR "%s: %s: '%s' can not be executed: %s", c->c.name,
@@ -269,7 +268,11 @@ bgp_hook_run (u32 index, void *P)
     {
       int r = do_execv (h->exec, index, p);
       if (r & BGP_HOOK_STATUS_RECONFIGURE)
-	async_config ();
+	{
+	  log (L_DEBUG "%s: external process requesting reconfigure..",
+	       GET_HS(index));
+	  async_config ();
+	}
 
       return r;
     }

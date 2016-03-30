@@ -33,7 +33,7 @@ insert_config_chunk()
 {
 	[ -z "${1}" ] && return
 	cpath="${VARP}/${1}"	
-	cat ${cpath} | egrep -q "^include \".*\/${1}\";" && return 1	
+	cat "${cpath}" | egrep -q "^include \".*\/${1}\";" && return 1	
 	remove_config_chunk "${1}"
 	echo "include \"${cpath}\";" >> ${INJECTOR}
 	return 0
