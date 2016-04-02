@@ -53,6 +53,8 @@ get_passwords(void)
 
 CF_DECLS
 
+CF_KEYWORDS(HOOK, CONN, INBOUND, FAIL, LOAD)
+
 CF_KEYWORDS(ROUTER, ID, PROTOCOL, TEMPLATE, PREFERENCE, DISABLED, DEBUG, ALL, OFF, DIRECT)
 CF_KEYWORDS(INTERFACE, IMPORT, EXPORT, FILTER, NONE, TABLE, STATES, ROUTES, FILTERS)
 CF_KEYWORDS(RECEIVE, LIMIT, ACTION, WARN, BLOCK, RESTART, DISABLE, KEEP, FILTERED)
@@ -120,7 +122,7 @@ listen_opt:
  | V6ONLY { new_config->listen_bgp_flags = 0; }
  | DUAL { new_config->listen_bgp_flags = 1; }
  ;
-
+ 
 
 CF_ADDTO(conf, gr_opts)
 
@@ -419,6 +421,13 @@ password_item_params:
  | ACCEPT TO datetime ';' password_item_params { this_p_item->accto = $3; }
  | ID expr ';' password_item_params { this_p_item->id = $2; if ($2 <= 0) cf_error("Password ID has to be greated than zero."); }
  ;
+
+CF_ADDTO(conf, cfhooks)
+ 
+cfhooks: 
+   HOOK CONN INBOUND FAIL text { new_config->hooks[HOOK_CONN_INBOUND_UNEXPECTED].exec=$5; }
+ | HOOK LOAD text { new_config->hooks[HOOK_LOAD].exec=$3; }
+;
 
 
 

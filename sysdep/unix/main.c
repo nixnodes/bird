@@ -33,6 +33,7 @@
 #include "nest/locks.h"
 #include "conf/conf.h"
 #include "filter/filter.h"
+#include "sysdep/unix/hook.h"
 
 #include "unix.h"
 #include "krt.h"
@@ -481,7 +482,6 @@ cli_init_unix(uid_t use_uid, gid_t use_gid)
     die("chmod: %m");
 
   setenv("PATH_CONTROL_SOCKET", path_control_socket, 1);
-  setenv("PATH_CONFIG_NAME", config_name, 1);
 }
 
 /*
@@ -823,6 +823,11 @@ main(int argc, char **argv)
   signal_init();
 
   config_commit(conf, RECONFIG_HARD, 0);
+
+  if ( hook_run (HOOK_LOAD, NULL, NULL) & HOOK_STATUS_BAD )
+    {
+      die("HOOK_LOAD: child process requested shutdown..");
+    }
 
   graceful_restart_init();
 

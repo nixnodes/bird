@@ -5,6 +5,7 @@
 
 #include "hook.h"
 #include "bgp.h"
+#include "lib/socket.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,12 +16,7 @@
 #include <signal.h>
 #include <errno.h>
 
-#define ERRNO_STRING char __b[1024];strerror_r(errno,__b,1024);
-
-#define ERRNO_PRINT(m,e){ERRNO_STRING;log(L_ERR m,e,__b,errno);}
-#define SETENV_INT(a,b,c,d){snprintf(b,sizeof(b),a,d);setenv(c,b,1);}
-
-char *bgp_hook_strings[BGP_MAX_HOOKS] =
+static const char *hook_strings[MAX_HOOKS] =
   { [BGP_HOOK_ENTER_ESTABLISHED] = "BGP_HOOK_ENTER_ESTABLISHED",
       [BGP_HOOK_LEAVE_ESTABLISHED ] = "BGP_HOOK_LEAVE_ESTABLISHED",
       [BGP_HOOK_ENTER_CLOSE ] = "BGP_HOOK_ENTER_CLOSE", [BGP_HOOK_ENTER_IDLE
@@ -39,12 +35,6 @@ char *bgp_hook_strings[BGP_MAX_HOOKS] =
       [BGP_HOOK_KEEPALIVE] = "BGP_HOOK_KEEPALIVE", [BGP_HOOK_RECONFIGURE
 	  ] = "BGP_HOOK_RECONFIGURE", [BGP_HOOK_CONN_TIMEOUT
 	  ] = "BGP_HOOK_CONN_TIMEOUT" };
-
-#ifdef IPV6
-#define SETENV_IPTOSTR(a,c){u16*ip=(u16*)c;snprintf(b, sizeof(b),"%x:%x:%x:%x:%x:%x:%x:%x",ip[1],ip[0],ip[3],ip[2],ip[5],ip[4],ip[7],ip[6]);setenv(a,b,1);}
-#else
-#define SETENV_IPTOSTR(a,c){u8*ip=(u8*)c;snprintf(b, sizeof(b),"%hhu.%hhu.%hhu.%hhu",ip[3],ip[2],ip[1],ip[0]);setenv(a,b,1);}
-#endif
 
 static int
 bgp_create_hook (u32 index, struct bgp_proto *p)
@@ -66,20 +56,29 @@ bgp_parse_hooks (void *P)
   memset (p->hooks, 0x0, sizeof(p->hooks));
 
   int index;
-  for (index = 1; index < BGP_MAX_HOOKS; index++)
+  for (index = 1; index < MAX_HOOKS; index++)
     {
-      struct bgp_hook *h = &p->cf->hc.hooks[index];
+      bgp_hook *h = &p->cf->hc.hooks[index];
       if (h->exec != NULL)
 	{
 	  bgp_create_hook (index, p);
 	}
     }
 
-  char b[16];
+  char b[64];
+  SETENV_INT("%hu", b, "REMOTE_PORT", p->cf->remote_port);
+  SETENV_INT("%u", b, "REMOTE_AS", p->cf->remote_as);
+  SETENV_IPTOSTR("REMOTE_IP", &p->cf->remote_ip);
+  SETENV_IPTOSTR("CFG_SOURCE_IP", &p->cf->source_addr);
 
-  SETENV_INT("%d", b, "BGP_HOOK_STATUS_BAD", BGP_HOOK_STATUS_BAD);
-  SETENV_INT("%d", b, "BGP_HOOK_STATUS_RECONFIGURE",
-	     BGP_HOOK_STATUS_RECONFIGURE);
+  setenv ("TABLE_NAME", p->p.table->name, 1);
+
+  if (p->cf->c.dsc != NULL)
+    {
+      setenv ("PROTO_DESC", p->cf->c.dsc, 1);
+    }
+
+  setenv ("PROTO_NAME", p->cf->c.name, 1);
 
   return 0;
 }
@@ -90,55 +89,42 @@ bgp_check_hooks (void *C)
   struct bgp_config *c = (struct bgp_config *) C;
 
   int index;
-  int r = 0, t;
+  int t;
 
-  for (index = 1; index < BGP_MAX_HOOKS; index++)
+  for (index = 1; index < MAX_HOOKS; index++)
     {
-      struct bgp_hook *h = &c->hc.hooks[index];
+      bgp_hook *h = &c->hc.hooks[index];
       if (h->exec == NULL)
 	{
 	  continue;
 	}
 
-      r += (t = access (h->exec, R_OK | X_OK));
+      t = access (h->exec, R_OK | X_OK);
 
       if (t == -1)
 	{
 	  ERRNO_STRING
-	  log (L_ERR "%s: %s: '%s' can not be executed: %s", c->c.name,
+	  log (L_WARN "%s: %s: '%s' is not executable: %s", c->c.name,
 	       GET_HS(index), h->exec, __b);
 	}
     }
 
-  return r;
+  return 0;
 }
 
 static void
-bgp_build_hook_envvars (u32 index, struct bgp_proto *p)
+bgp_build_hook_envvars (u32 index, void *P)
 {
+  struct bgp_proto *p = (struct bgp_proto *) P;
+
   char b[MAX_ENV_SIZE];
 
-  setenv ("BGP_EVENT", GET_HS(index), 1);
+  setenv ("EVENT", GET_HS(index), 1);
   SETENV_INT("%u", b, "EVENT_INDEX", index);
 
-  if (p->cf->c.dsc != NULL)
-    {
-      setenv ("PROTO_DESC", p->cf->c.dsc, 1);
-    }
-
-  setenv ("PROTO_NAME", p->cf->c.name, 1);
-
-  SETENV_IPTOSTR("REMOTE_IP", &p->cf->remote_ip);
-  SETENV_IPTOSTR("CFG_SOURCE_IP", &p->cf->source_addr);
-  SETENV_IPTOSTR("SOURCE_IP", &p->source_addr);
-
-  SETENV_INT("%hu", b, "REMOTE_PORT", p->cf->remote_port);
-  SETENV_INT("%u", b, "REMOTE_AS", p->cf->remote_as);
   SETENV_INT("%hhu", b, "LAST_ERROR_CLASS", p->last_error_class);
   SETENV_INT("%u", b, "LAST_ERROR_CODE", p->last_error_code);
-  SETENV_INT("%u", b, "LOCAL_ID", p->local_id);
   SETENV_INT("%u", b, "REMOTE_ID", p->remote_id);
-  SETENV_INT("%hhu", b, "IS_INTERNAL", p->is_internal);
   SETENV_INT("%hhu", b, "LOAD_STATE", p->load_state);
   SETENV_INT("%hhu", b, "DOWN_CODE", p->p.down_code);
   SETENV_INT("%hhu", b, "DOWN_SCHED", p->p.down_sched);
@@ -156,7 +142,10 @@ bgp_build_hook_envvars (u32 index, struct bgp_proto *p)
   SETENV_INT("%d", b, "RS_CLIENT", p->rs_client);
   SETENV_INT("%u", b, "LAST_PROTO_ERROR", (unsigned int )p->last_proto_error);
   SETENV_INT("%u", b, "STARTUP_DELAY", p->startup_delay);
-  setenv ("TABLE_NAME", p->p.table->name, 1);
+  SETENV_INT("%hhu", b, "IS_INTERNAL", p->is_internal);
+  SETENV_INT("%u", b, "LOCAL_ID", p->local_id);
+
+  SETENV_IPTOSTR("SOURCE_IP", &p->source_addr);
 
   if (p->conn != NULL)
     {
@@ -166,118 +155,40 @@ bgp_build_hook_envvars (u32 index, struct bgp_proto *p)
     {
       setenv ("CONN_STATE", "0", 1);
     }
-
-  SETENV_INT("%u", b, "BIRD_PID", getpid ());
 }
-
-static int
-prep_for_exec (u32 index, struct bgp_proto *p)
-{
-  const char inputfile[] = "/dev/null";
-
-  if (close (STDIN_FILENO) < 0)
-    {
-      return 1;
-    }
-  else
-    {
-      if (open (inputfile, O_RDONLY
-#if defined O_LARGEFILE
-		| O_LARGEFILE
-#endif
-		) < 0)
-	{
-	  log (L_ERR "ERROR: could not open %s", inputfile);
-	}
-    }
-
-  return 0;
-}
-
-static int
-do_execv (const char *exec, u32 index, struct bgp_proto *p)
-{
-  pid_t c_pid;
-
-  bgp_build_hook_envvars (index, p);
-
-  if ((c_pid = fork ()) == (pid_t) -1)
-    {
-      ERRNO_PRINT("%s: fork failed [%s]", GET_HS(index))
-      return 1;
-    }
-
-  if (0 == c_pid)
-    {
-      if (prep_for_exec (index, p))
-	{
-	  _exit (1);
-	}
-      else
-	{
-	  const char *argv[] =
-	    { [0] = exec, [1] = NULL };
-	  execv (exec, (char**) argv);
-	  ERRNO_PRINT("%s: execv failed [%s]", GET_HS(index))
-	  _exit (1);
-	}
-    }
-
-  if (p->hooks[index].ac & BGP_HOOK_F_ASYNC)
-    {
-      log (L_DEBUG "%s: forked %s to background | %s", GET_HS(index), exec,
-	   p->cf->c.name);
-      return 0;
-    }
-  else
-    {
-      log (L_DEBUG "%s: %u executed '%s' on %s", GET_HS(index), c_pid, exec,
-	   p->cf->c.name);
-
-      int status;
-
-      while (waitpid (c_pid, &status, 0) == (pid_t) -1)
-	{
-	  if (errno != EINTR)
-	    {
-	      ERRNO_PRINT(
-		  "hook: %s: failed waiting for child process to finish [%s]",
-		  GET_HS(index))
-	      return -1;
-	    }
-	}
-
-      int r = WEXITSTATUS(status);
-
-      log (L_DEBUG "%s: %u exited with status: %d | %s", GET_HS(index), c_pid,
-	   r, p->cf->c.name);
-
-      return r;
-    }
-}
-
-#include "sysdep/unix/unix.h"
 
 int
 bgp_hook_run (u32 index, void *P)
 {
   struct bgp_proto *p = (struct bgp_proto *) P;
-  struct bgp_hook *h = &p->hooks[index];
+
+  bgp_hook *h = &p->hooks[index];
 
   if (h->exec != NULL)
     {
-      int r = do_execv (h->exec, index, p);
-      if (r & BGP_HOOK_STATUS_RECONFIGURE)
-	{
-	  log (L_DEBUG "%s: external process requesting reconfigure..",
-	       GET_HS(index));
-	  async_config ();
-	}
 
-      return r;
+      struct hook_execv_data data = hook_execv_mkdata (h->ac,
+						       bgp_build_hook_envvars,
+						       P, GET_HS(index),
+						       p->cf->c.name);
+
+      return do_execv (h->exec, index, &data);
+
     }
   else
     {
       return 0;
     }
+}
+
+void
+bgp_handle_invalid_in_conn (u32 index, void *data)
+{
+  char b[64];
+  sock *sk = data;
+
+  SETENV_IPTOSTR("REMOTE_IP", &sk->daddr);
+  SETENV_IPTOSTR("SOURCE_IP", &sk->saddr);
+  SETENV_INT("%hu", b, "REMOTE_PORT", (unsigned short )sk->dport);
+  SETENV_INT("%hu", b, "SOURCE_PORT", (unsigned short )sk->sport);
 }

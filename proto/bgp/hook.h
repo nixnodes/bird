@@ -12,22 +12,11 @@ bgp_hook_run (unsigned int flags, void *pp);
 int
 bgp_check_hooks (void *pp);
 
-#define BGP_MAX_HOOKS		24
-#define BGP_HOOK_F_ASYNC	(u32)1 << 1
 
-#define BGP_HOOK_STATUS_BAD		(int)1 << 1
-#define BGP_HOOK_STATUS_RECONFIGURE	(int)1 << 2
+#include "sysdep/unix/hook.h"
 
-struct bgp_hook
-{
-  unsigned int ac;
-  char *exec;
-};
-
-struct bgp_hook_config
-{
-  struct bgp_hook hooks[BGP_MAX_HOOKS];
-};
+typedef struct glob_hook bgp_hook;
+typedef struct glob_hook_config bgp_hook_config;
 
 #define BGP_HOOK_ENTER_ESTABLISHED 	0x01
 #define BGP_HOOK_LEAVE_ESTABLISHED 	0x02
@@ -51,17 +40,7 @@ struct bgp_hook_config
 #define BGP_HOOK_KEEPALIVE		0x14
 #define BGP_HOOK_RECONFIGURE		0x15
 
-char *bgp_hook_strings[BGP_MAX_HOOKS];
-
-#define GET_HS(a) bgp_hook_strings[a]
-
-#ifndef WEXITSTATUS
-#define WEXITSTATUS(status)     (((status) & 0xff00) >> 8)
-#endif
-
-#include <limits.h>
-
-#define MAX_ENV_SIZE	PATH_MAX
-
+void
+bgp_handle_invalid_in_conn (u32 index, void *data);
 
 #endif /* PROTO_BGP_HOOK_H_ */

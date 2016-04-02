@@ -13,7 +13,7 @@ CF_HDR
 CF_DEFINES
 
 #define BGP_CFG ((struct bgp_config *) this_proto)
-#define BGP_HOOK_PARSEOPT(a,b,c){if(c){BGP_CFG->hc.hooks[a].ac|=BGP_HOOK_F_ASYNC;}BGP_CFG->hc.hooks[a].exec=b;}
+#define BGP_HOOK_PARSEOPT(a,b,c){if(c){BGP_CFG->hc.hooks[a].ac|=HOOK_F_ASYNC;}BGP_CFG->hc.hooks[a].exec=b;}
 
 CF_DECLS
 	

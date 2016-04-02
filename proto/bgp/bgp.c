@@ -367,7 +367,7 @@ bgp_conn_enter_openconfirm_state(struct bgp_conn *conn)
   /* Really, most of the work is done in bgp_rx_open(). */
   bgp_conn_set_state(conn, BS_OPENCONFIRM);
 
-  if (bgp_hook_run (BGP_HOOK_ENTER_OPENCONFIRM, conn->bgp) & BGP_HOOK_STATUS_BAD)
+  if (bgp_hook_run (BGP_HOOK_ENTER_OPENCONFIRM, conn->bgp) & HOOK_STATUS_BAD)
      bgp_stop(conn->bgp, 0);
 }
 
@@ -414,7 +414,7 @@ bgp_conn_enter_established_state(struct bgp_conn *conn)
   bgp_conn_set_state(conn, BS_ESTABLISHED);
   proto_notify_state(&p->p, PS_UP);
 
-  if (bgp_hook_run (BGP_HOOK_ENTER_ESTABLISHED, p) & BGP_HOOK_STATUS_BAD)
+  if (bgp_hook_run (BGP_HOOK_ENTER_ESTABLISHED, p) & HOOK_STATUS_BAD)
     bgp_stop(p, 0);
 
 }
@@ -616,7 +616,7 @@ bgp_connected(sock *sk)
   BGP_TRACE(D_EVENTS, "Connected");
   bgp_send_open(conn);
 
-  if (bgp_hook_run (BGP_HOOK_CONN_OUTBOUND, p) & BGP_HOOK_STATUS_BAD)
+  if (bgp_hook_run (BGP_HOOK_CONN_OUTBOUND, p) & HOOK_STATUS_BAD)
     bgp_stop(conn->bgp, 0);
 }
 
@@ -842,6 +842,7 @@ bgp_incoming_connection(sock *sk, int dummy UNUSED)
     {
       log(L_WARN "BGP: Unexpected connect from unknown address %I%J (port %d)",
 	  sk->daddr, ipa_is_link_local(sk->daddr) ? sk->iface : NULL, sk->dport);
+      hook_run (HOOK_CONN_INBOUND_UNEXPECTED, bgp_handle_invalid_in_conn, (void*)sk);
       rfree(sk);
       return 0;
     }
@@ -868,7 +869,7 @@ bgp_incoming_connection(sock *sk, int dummy UNUSED)
       return 0;
     }
 
-  if ( bgp_hook_run(BGP_HOOK_CONN_INBOUND, p) & BGP_HOOK_STATUS_BAD )
+  if ( bgp_hook_run(BGP_HOOK_CONN_INBOUND, p) & HOOK_STATUS_BAD )
     {
       log(L_ERR "%s: hook: child process aborted inbound connection", p->p.name);
       rfree(sk);
@@ -1413,7 +1414,7 @@ bgp_reconfigure(struct proto *P, struct proto_config *C)
 
   bgp_parse_hooks (p);
 
-  if (bgp_hook_run (BGP_HOOK_RECONFIGURE, p) & BGP_HOOK_STATUS_BAD)
+  if (bgp_hook_run (BGP_HOOK_RECONFIGURE, p) & HOOK_STATUS_BAD)
       bgp_stop(p, 0);
 
   return same;

@@ -6,6 +6,7 @@ unix.h
 endian.h
 config.Y
 random.c
+hook.c
 
 krt.c
 krt.h

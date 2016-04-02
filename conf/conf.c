@@ -55,6 +55,7 @@
 #include "lib/timer.h"
 #include "conf/conf.h"
 #include "filter/filter.h"
+#include "sysdep/unix/hook.h"
 
 static jmp_buf conf_jmpbuf;
 
@@ -286,6 +287,8 @@ config_done(void *unused UNUSED)
       if (config_do_commit(conf, type))
 	config_done(NULL);
     }
+
+  hook_init();
 }
 
 /**

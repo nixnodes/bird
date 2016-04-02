@@ -67,7 +67,7 @@ struct bgp_config {
   int check_link;			/* Use iface link state for liveness detection */
   int bfd;				/* Use BFD for liveness detection */
 
-  struct bgp_hook_config hc;
+  bgp_hook_config hc;
 };
 
 #define MLL_SELF 1
@@ -156,7 +156,7 @@ struct bgp_proto {
   u8 last_error_class; 			/* Error class of last error */
   u32 last_error_code;			/* Error code of last error. BGP protocol errors
 					   are encoded as (bgp_err_code << 16 | bgp_err_subcode) */
-  struct bgp_hook hooks[BGP_MAX_HOOKS];
+  struct glob_hook hooks[MAX_HOOKS];
 #ifdef IPV6
   byte *mp_reach_start, *mp_unreach_start; /* Multiprotocol BGP attribute notes */
   unsigned mp_reach_len, mp_unreach_len;
