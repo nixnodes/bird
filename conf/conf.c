@@ -288,7 +288,8 @@ config_done(void *unused UNUSED)
 	config_done(NULL);
     }
 
-  hook_init();
+  hook_setenv_conf_generic();
+  hook_run (HOOK_POST_CONFIGURE, NULL, NULL);
 }
 
 /**
@@ -325,6 +326,12 @@ config_commit(struct config *c, int type, int timeout)
     {
       config_free(c);
       return CONF_SHUTDOWN;
+    }
+
+  if (hook_run (HOOK_PRE_CONFIGURE, NULL, NULL) & HOOK_STATUS_BAD)
+    {
+      log(L_WARN "Configuration was not reloaded");
+      return CONF_NOTHING;
     }
 
   undo_available = 1;

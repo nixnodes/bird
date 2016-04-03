@@ -65,11 +65,25 @@ bgp_parse_hooks (void *P)
 	}
     }
 
-  char b[64];
+  char b[MAX_ENV_SIZE];
   SETENV_INT("%hu", b, "REMOTE_PORT", p->cf->remote_port);
   SETENV_INT("%u", b, "REMOTE_AS", p->cf->remote_as);
   SETENV_IPTOSTR("REMOTE_IP", &p->cf->remote_ip);
   SETENV_IPTOSTR("CFG_SOURCE_IP", &p->cf->source_addr);
+  SETENV_INT("%d", b, "IGP_METRIC", p->cf->igp_metric);
+  SETENV_INT("%d", b, "MED_METRIC", p->cf->med_metric);
+  SETENV_INT("%d", b, "GW_MODE", p->cf->gw_mode);
+  SETENV_INT("%d", b, "PREFER_OLDER", p->cf->prefer_older);
+  SETENV_INT("%d", b, "DETERMINISTIC_MED", p->cf->deterministic_med);
+  SETENV_INT("%d", b, "DEFAULT_LOCAL_PREF", p->cf->default_local_pref);
+  SETENV_INT("%d", b, "CAPABILITIES", p->cf->capabilities);
+  SETENV_INT("%d", b, "ENABLE_REFRESH", p->cf->enable_refresh);
+  SETENV_INT("%d", b, "ENABLE_AS4", p->cf->enable_as4);
+  SETENV_INT("%u", b, "RR_CLUSTER_ID", p->cf->rr_cluster_id);
+  SETENV_INT("%d", b, "ADVERTISE_IPV4", p->cf->advertise_ipv4);
+  SETENV_INT("%d", b, "PASSIVE", p->cf->passive);
+  SETENV_INT("%d", b, "SECONDARY", p->cf->secondary);
+  SETENV_INT("%d", b, "ADD_PATH", p->cf->add_path);
 
   setenv ("TABLE_NAME", p->p.table->name, 1);
 
@@ -162,6 +176,11 @@ bgp_hook_run (u32 index, void *P)
 {
   struct bgp_proto *p = (struct bgp_proto *) P;
 
+  if (p == NULL)
+    {
+      return HOOK_STATUS_NONE;
+    }
+
   bgp_hook *h = &p->hooks[index];
 
   if (h->exec != NULL)
@@ -177,7 +196,7 @@ bgp_hook_run (u32 index, void *P)
     }
   else
     {
-      return 0;
+      return HOOK_STATUS_NONE;
     }
 }
 

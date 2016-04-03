@@ -19,7 +19,8 @@
 
 static const char *hook_strings[MAX_HOOKS] =
   { [HOOK_CONN_INBOUND_UNEXPECTED ] = "HOOK_CONN_INBOUND_UNEXPECTED", [HOOK_LOAD
-      ] = "HOOK_LOAD" };
+      ] = "HOOK_LOAD", [HOOK_POST_CONFIGURE] = "HOOK_POST_CONFIGURE",
+      [HOOK_PRE_CONFIGURE] = "HOOK_PRE_CONFIGURE" };
 
 static int
 prep_for_exec (void)
@@ -102,7 +103,7 @@ do_execv (const char *exec, u32 index, struct hook_execv_data *data)
 	      ERRNO_PRINT(
 		  "hook: %s: failed waiting for child process to finish [%s]",
 		  data->hook_string)
-	      return -1;
+	      return 1;
 	    }
 	}
 
@@ -111,7 +112,7 @@ do_execv (const char *exec, u32 index, struct hook_execv_data *data)
       log (L_DEBUG "%s: %s: %u exited with status: %d", data->protocol,
 	   data->hook_string, c_pid, r);
 
-      if (r & HOOK_STATUS_RECONFIGURE)
+      if ((r & HOOK_STATUS_RECONFIGURE) && !(data->flags & HOOK_F_NORECONF))
 	{
 	  log (L_DEBUG "%s: %s: external process requesting reconfigure..",
 	       data->protocol, data->hook_string);
@@ -123,12 +124,12 @@ do_execv (const char *exec, u32 index, struct hook_execv_data *data)
 }
 
 struct hook_execv_data
-hook_execv_mkdata (unsigned int ac, void *pre, void *data, const char *hs,
+hook_execv_mkdata (u32 ac, void *pre, void *data, const char *hs,
 		   const char *proto)
 {
   struct hook_execv_data t =
-    { .flags = ac & HOOK_F_ASYNC ? F_EXECV_FORK : 0, .pre = pre, .data = data,
-	.hook_string = hs, .protocol = proto };
+    { .flags = ac, .pre = pre, .data = data, .hook_string = hs, .protocol =
+	proto };
   return t;
 }
 
@@ -136,7 +137,7 @@ static void
 build_hook_envvars (u32 index, void *C)
 {
   //struct config *c = (struct config *) C;
-  char b[32];
+  char b[MAX_ENV_SIZE];
   setenv ("EVENT", GET_HS(index), 1);
   SETENV_INT("%u", b, "EVENT_INDEX", index);
 }
@@ -145,11 +146,16 @@ int
 hook_run (u32 index, execv_callback add, void *add_data)
 {
   struct config *c = config;
+
+  if (c == NULL)
+    {
+      return HOOK_STATUS_NONE ;
+    }
+
   struct glob_hook *h = &c->hooks[index];
 
   if (h->exec != NULL)
     {
-
       struct hook_execv_data data = hook_execv_mkdata (h->ac,
 						       build_hook_envvars,
 						       (void*) c, GET_HS(index),
@@ -159,19 +165,19 @@ hook_run (u32 index, execv_callback add, void *add_data)
       data.add_data = add_data;
 
       return do_execv (h->exec, index, &data);
-
     }
   else
     {
-      return 0;
+      return HOOK_STATUS_NONE ;
     }
 }
 
 void
-hook_init (void)
+hook_setenv_conf_generic (void)
 {
   char b[MAX_ENV_SIZE];
 
+  SETENV_INT("%d", b, "HOOK_STATUS_NONE", HOOK_STATUS_NONE);
   SETENV_INT("%d", b, "HOOK_STATUS_BAD", HOOK_STATUS_BAD);
   SETENV_INT("%d", b, "HOOK_STATUS_RECONFIGURE", HOOK_STATUS_RECONFIGURE);
   SETENV_INT("%u", b, "BIRD_PID", getpid ());
@@ -185,7 +191,8 @@ hook_init (void)
   SETENV_INT("%u", b, "GR_WAIT", (unsigned int )config->gr_wait);
 
   setenv ("ERR_MSG", config->err_msg ? config->err_msg : "", 1);
-  setenv ("ERR_FILE_NAME", config->err_file_name ? config->err_file_name : "", 1);
+  setenv ("ERR_FILE_NAME", config->err_file_name ? config->err_file_name : "",
+	  1);
   setenv ("SYSLOG_NAME", config->syslog_name ? config->syslog_name : "", 1);
   setenv ("PATH_CONFIG_NAME", config->file_name ? config->file_name : "", 1);
 

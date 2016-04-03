@@ -2,19 +2,22 @@
 
 #BIRDC=birdc
 
+BASE_PATH=`basename ${0}`
+
 CONFBASE=`dirname ${PATH_CONFIG_NAME}`
 
 [[ "${CONFBASE}" = "." ]] && CONFBASE=${PWD}
 
-CONFPATH=${CONFBASE}/bird.conf.d
+CONFPATH=${CONFBASE}/run.conf.d
 
 [ -d ${CONFPATH} ] || {
-	mkdir -p ${CONFPATH} || exit 2
+        mkdir -p ${CONFPATH} || exit 2
 }
 
-VARP="${CONFPATH}/`basename ${0}`"
+VARP="${CONFPATH}/${BASE_PATH}"
 
 INJECTOR=${VARP}/_hook
+
 
 [ -d ${VARP} ] || {
 	mkdir -p ${VARP} || exit 1 

@@ -25,7 +25,7 @@
 
 log()
 {
-	logger -p local0.notice -t $0[$$] ${@}
+	logger -p local0.notice -t ${BASE_PATH}[$$] ${@}
 	echo ${@}
 }
 
@@ -64,6 +64,7 @@ case ${EVENT} in
 		log ${BGP_EVENT} occured on ${PROTO_NAME} ${CONN_STATE}
 	;;
 	HOOK_*)
+		#[ $EVENT = HOOK_PRE_CONFIGURE ] && _exit $HOOK_STATUS_BAD
 		log "Global event '${EVENT}' occured on [${BIRD_PID}] ${ROUTER_ID} : ${PATH_CONFIG_NAME}"
 	;;
 	*)

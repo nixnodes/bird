@@ -9,7 +9,9 @@
 #define SYSDEP_UNIX_HOOK_H_
 
 #define HOOK_LOAD			0x1
-#define HOOK_CONN_INBOUND_UNEXPECTED	0x10
+#define HOOK_CONN_INBOUND_UNEXPECTED	0x2
+#define HOOK_PRE_CONFIGURE		0x3
+#define HOOK_POST_CONFIGURE		0x4
 
 #define MAX_HOOKS		24
 
@@ -39,14 +41,17 @@ struct hook_execv_data
 };
 
 void
-hook_init (void);
+hook_setenv_conf_generic (void);
 
 #define HOOK_F_ASYNC		(u32)1 << 1
+#define HOOK_F_NORECONF		(u32)1 << 2
 
+#define HOOK_STATUS_NONE	(int)0
 #define HOOK_STATUS_BAD		(int)1 << 1
 #define HOOK_STATUS_RECONFIGURE	(int)1 << 2
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <errno.h>
 
 #define GET_HS(a) hook_strings[a]
@@ -60,12 +65,15 @@ hook_init (void);
 #define SETENV_IPTOSTR(a,c){u8*ip=(u8*)c;snprintf(b, sizeof(b),"%hhu.%hhu.%hhu.%hhu",ip[3],ip[2],ip[1],ip[0]);setenv(a,b,1);}
 #endif
 
+#define HOOK_PARSEOPT(a,b,c,d){if(c){d->hc.hooks[a].ac|=c;}d->hc.hooks[a].exec=b;}
+#define HOOK_PARSEOPT2(a,b,c,d){if(c){d->hooks[a].ac|=c;}d->hooks[a].exec=b;}
+
 #define F_EXECV_FORK	(u32)1 << 1
 
 int
 do_execv (const char *exec, u32 index, struct hook_execv_data *data);
 struct hook_execv_data
-hook_execv_mkdata (unsigned int ac, void *pre, void *data, const char *hs,
+hook_execv_mkdata (u32 ac, void *pre, void *data, const char *hs,
 		   const char *proto);
 
 int
