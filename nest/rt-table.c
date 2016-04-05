@@ -43,6 +43,8 @@
 #include "lib/string.h"
 #include "lib/alloca.h"
 
+#include "sysdep/unix/hook.h"
+
 pool *rt_table_pool;
 
 static slab *rte_slab;
@@ -242,6 +244,11 @@ export_filter(struct announce_hook *ah, rte *rt0, rte **rt_free, ea_list **tmpa,
 
       stats->exp_updates_filtered++;
       rte_trace_out(D_FILTERS, p, rt, "filtered out");
+      goto reject;
+    }
+
+  if ( filter_hook_dispatcher(BGP_HOOK_EXPORT, p, rt0) & HOOK_STATUS_BAD )
+    {
       goto reject;
     }
 
@@ -1030,11 +1037,24 @@ rte_update2(struct announce_hook *ah, net *net, rte *new, struct rte_src *src)
 		}
 	      if (tmpa != old_tmpa && src->proto->store_tmp_attrs)
 		src->proto->store_tmp_attrs(new, tmpa);
+
 	    }
 	}
       if (!rta_is_cached(new->attrs)) /* Need to copy attributes */
 	new->attrs = rta_lookup(new->attrs);
       new->flags |= REF_COW;
+
+      if ( !(new->flags & REF_FILTERED) &&
+	  (filter_hook_dispatcher(BGP_HOOK_IMPORT, p, new) & HOOK_STATUS_BAD) )
+	{
+	  stats->imp_updates_filtered++;
+	  rte_trace_in(D_FILTERS, p, new, "filtered out");
+
+	  if (! ah->in_keep_filtered)
+	    goto drop;
+
+	  new->flags |= REF_FILTERED;
+	}
     }
   else
     {
@@ -1046,6 +1066,7 @@ rte_update2(struct announce_hook *ah, net *net, rte *new, struct rte_src *src)
 	  rte_update_unlock();
 	  return;
 	}
+
     }
 
  recalc:

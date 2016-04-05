@@ -12,8 +12,9 @@
 #define HOOK_CONN_INBOUND_UNEXPECTED	0x2
 #define HOOK_PRE_CONFIGURE		0x3
 #define HOOK_POST_CONFIGURE		0x4
+#define HOOK_SHUTDOWN			0x5
 
-#define MAX_HOOKS		24
+#define MAX_HOOKS		32
 
 struct glob_hook
 {
@@ -37,11 +38,12 @@ struct hook_execv_data
   void *data, *add_data;
   const char *hook_string;
   const char *protocol;
+  char **argv;
   u32 flags;
 };
 
 void
-hook_setenv_conf_generic (void);
+hook_setenv_conf_generic (void *C);
 
 #define HOOK_F_ASYNC		(u32)1 << 1
 #define HOOK_F_NORECONF		(u32)1 << 2
@@ -74,10 +76,10 @@ int
 do_execv (const char *exec, u32 index, struct hook_execv_data *data);
 struct hook_execv_data
 hook_execv_mkdata (u32 ac, void *pre, void *data, const char *hs,
-		   const char *proto);
+		   const char *proto, void *add, void *add_data, void *argv);
 
 int
-hook_run (u32 index, execv_callback add, void* add_data);
+hook_run (u32 index, void *C, execv_callback add, void* add_data);
 
 #include <stdlib.h>
 
@@ -88,5 +90,20 @@ hook_run (u32 index, execv_callback add, void* add_data);
 #include <limits.h>
 
 #define MAX_ENV_SIZE	PATH_MAX
+#define PTRSIZE 	sizeof(void*)
+
+#define _BA_AS_PATH BA_AS_PATH
+
+int
+filter_hook_dispatcher (u32 index, void *P, void *RT);
+
+#define BGP_HOOK_IMPORT			0x18
+#define BGP_HOOK_EXPORT			0x19
+
+typedef int
+generic_hook_filter (u32 index, void *P, void *RT);
+
+
+generic_hook_filter bgp_hook_filter;
 
 #endif /* SYSDEP_UNIX_HOOK_H_ */

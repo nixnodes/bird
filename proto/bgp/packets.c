@@ -1070,11 +1070,19 @@ bgp_rx_end_mark(struct bgp_proto *p)
 } while (0)
 
 
+#define RTE_UPDATE_ENVVARS()  \
+   char b[MAX_ENV_SIZE]; \
+   SETENV_IPTOSTR("PREFIX", &prefix); \
+   SETENV_INT("%d",b,"PREFIX_LEN", pxlen); \
+   SETENV_INT("%u",b,"PATH_ID", (unsigned int)path_id); \
+
+
 static inline void
 bgp_rte_update(struct bgp_proto *p, ip_addr prefix, int pxlen,
 	       u32 path_id, u32 *last_id, struct rte_src **src,
 	       rta *a0, rta **a)
 {
+
   if (path_id != *last_id)
     {
       *src = rt_get_source(&p->p, path_id);
@@ -1104,6 +1112,20 @@ bgp_rte_update(struct bgp_proto *p, ip_addr prefix, int pxlen,
   e->pflags = 0;
   e->u.bgp.suppressed = 0;
   rte_update2(p->p.main_ahook, n, e, *src);
+
+  /*RTE_UPDATE_ENVVARS();
+  SETENV_IPTOSTR("BGP_NEXT_HOP", &(*a)->gw);
+  SETENV_IPTOSTR("BGP_FROM", &(*a)->from);
+
+  byte buf[1000];
+
+  eattr *ad = ea_find(e->attrs->eattrs, EA_CODE(EAP_BGP, BA_AS_PATH));
+  as_path_format(ad->u.ptr, buf, sizeof(buf));
+
+  setenv("BGP_PATH",buf, 1);
+
+  bgp_hook_run (BGP_HOOK_UPDATE, p, NULL);*/
+
 }
 
 static inline void
@@ -1115,6 +1137,10 @@ bgp_rte_withdraw(struct bgp_proto *p, ip_addr prefix, int pxlen,
       *src = rt_find_source(&p->p, path_id);
       *last_id = path_id;
     }
+
+  RTE_UPDATE_ENVVARS();
+
+  bgp_hook_run (BGP_HOOK_WITHDRAW, p, NULL, NULL);
 
   net *n = net_find(p->p.table, prefix, pxlen);
   rte_update2( p->p.main_ahook, n, NULL, *src);
@@ -1560,7 +1586,7 @@ bgp_rx_keepalive(struct bgp_conn *conn)
   struct bgp_proto *p = conn->bgp;
 
   BGP_TRACE(D_PACKETS, "Got KEEPALIVE");
-  bgp_hook_run (BGP_HOOK_KEEPALIVE, p);
+  bgp_hook_run (BGP_HOOK_KEEPALIVE, p, NULL, NULL);
   bgp_start_timer(conn->hold_timer, conn->hold_time);
   switch (conn->state)
     {

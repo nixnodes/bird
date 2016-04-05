@@ -766,6 +766,11 @@ main(int argc, char **argv)
     log_init_debug("");
   log_switch(debug_flag, NULL, NULL);
 
+  if ( run_in_foreground )
+    {
+      setenv("BIRD_FOREGROUND", "1", 1);
+    }
+
   resource_init();
   olock_init();
   io_init();
@@ -824,7 +829,7 @@ main(int argc, char **argv)
 
   config_commit(conf, RECONFIG_HARD, 0);
 
-  if ( hook_run (HOOK_LOAD, NULL, NULL) & HOOK_STATUS_BAD )
+  if ( hook_run (HOOK_LOAD, conf, NULL, NULL) & HOOK_STATUS_BAD )
     {
       die("HOOK_LOAD: child process requested shutdown..");
     }
