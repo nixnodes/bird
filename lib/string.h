@@ -24,4 +24,10 @@ void buffer_puts(buffer *buf, const char *str);
 
 int patmatch(byte *pat, byte *str);
 
+static inline char *xbasename(const char *str)
+{
+  char *s = strrchr(str, '/');
+  return s ? s+1 : (char *) str;
+}
+
 #endif
