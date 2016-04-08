@@ -12,7 +12,6 @@
 #include "sysdep/unix/hook.h"
 #include "conf/conf.h"
 
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -211,19 +210,20 @@ hook_setenv_conf_generic (void *c)
       /*
        setenv ("ERR_MSG", cfg->err_msg ? cfg->err_msg : "", 1);
        setenv ("ERR_FILE_NAME", cfg->err_file_name ? cfg->err_file_name : "", 1);
-      */
+       */
 
       setenv ("SYSLOG_NAME", cfg->syslog_name ? cfg->syslog_name : "", 1);
       setenv ("PATH_CONFIG_NAME", cfg->file_name ? cfg->file_name : "", 1);
     }
 }
 
+
 int
 filter_hook_dispatcher (u32 index, void *P, void *RT)
 {
   struct proto *p = (struct proto*) P;
 
-  if (p->proto->name[0] == 0x42 && p->proto->name[1] == 0x47) // BGP
+  if (IS_PROTO_BGP(p))
     {
       return bgp_hook_filter (index, P, RT);
     }
@@ -231,5 +231,5 @@ filter_hook_dispatcher (u32 index, void *P, void *RT)
     {
       return HOOK_STATUS_NONE ;
     }
-
 }
+

@@ -9,6 +9,7 @@
 CF_HDR
 
 #include "proto/bgp/bgp.h"
+#include "filter/filter.h"
 #include "sysdep/unix/hook.h"
 
 CF_DEFINES
@@ -22,6 +23,8 @@ CF_KEYWORDS(HOOK, AHOOK, ESTABLISHED, ENTER, INIT, DOWN,
 	LEAVE, CLOSE, IDLE, OPENCONFIRM, CHANGE, CONNECTED, CONFIGURE,
 	SHUTDOWN, GREST, CONN, INBOUND, OUTBOUND, FEED, TIMEOUT,
 	UPDATE, WITHDRAW, ROUTE, IMPORT, EXPORT)
+	
+CF_KEYWORDS(BGP_REMOTE_AS, BGP_LOCAL_AS)
 
 CF_KEYWORDS(BGP, LOCAL, NEIGHBOR, AS, HOLD, TIME, CONNECT, RETRY,
 	KEEPALIVE, MULTIHOP, STARTUP, VIA, NEXT, HOP, SELF, DEFAULT,
@@ -61,6 +64,8 @@ bgp_proto_start: proto_start BGP {
      BGP_CFG->default_local_pref = 100;
      BGP_CFG->gr_mode = BGP_GR_AWARE;
      BGP_CFG->gr_time = 120;
+     BGP_CFG->c.link_latency = 0;
+     BGP_CFG->c.link_bandwidth = 0;
  }
  ;
 
@@ -213,8 +218,10 @@ CF_ADDTO(dynamic_attr, BGP_CLUSTER_LIST
 	{ $$ = f_new_dynamic_attr(EAF_TYPE_INT_SET, T_CLIST, EA_CODE(EAP_BGP, BA_CLUSTER_LIST)); })
 CF_ADDTO(dynamic_attr, BGP_EXT_COMMUNITY
 	{ $$ = f_new_dynamic_attr(EAF_TYPE_EC_SET, T_ECLIST, EA_CODE(EAP_BGP, BA_EXT_COMMUNITY)); })
-
-
+CF_ADDTO(static_attr, BGP_REMOTE_AS
+	{ $$ = f_new_inst();  $$->aux = T_INT;  $$->a2.i = SA_REMOTE_AS; })
+CF_ADDTO(static_attr, BGP_LOCAL_AS
+	{ $$ = f_new_inst();  $$->aux = T_INT;  $$->a2.i = SA_LOCAL_AS; })
 
 CF_ENUM(T_ENUM_BGP_ORIGIN, ORIGIN_, IGP, EGP, INCOMPLETE)
 

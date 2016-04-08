@@ -46,6 +46,8 @@
 #include "conf/conf.h"
 #include "filter/filter.h"
 
+#include "proto/bgp/hook.h"
+
 #define P(a,b) ((a<<8) | b)
 
 #define CMP_ERROR 999
@@ -802,6 +804,11 @@ interpret(struct f_inst *what)
       case SA_DEST:	res.val.i = rta->dest; break;
       case SA_IFNAME:	res.val.s = rta->iface ? rta->iface->name : ""; break;
       case SA_IFINDEX:	res.val.i = rta->iface ? rta->iface->index : 0; break;
+      case SA_LATENCY:	res.val.i = (uint)rta->src->proto->cf->link_latency; break;
+      case SA_BANDWIDTH: res.val.i = (uint)rta->src->proto->cf->link_bandwidth; break;
+      case SA_SECURITY: res.val.i = (uint)rta->src->proto->cf->link_security; break;
+      case SA_REMOTE_AS: bgp_hook_proc_sa(1, &res, rta ); break;
+      case SA_LOCAL_AS: bgp_hook_proc_sa(2, &res, rta ); break;
 
       default:
 	bug("Invalid static attribute access (%x)", res.type);
@@ -854,7 +861,10 @@ interpret(struct f_inst *what)
 	rta->nexthops = NULL;
 	rta->hostentry = NULL;
 	break;
-
+   /* case SA_LATENCY:  // Making this attr writable probably has no benefits
+	 rta->src->proto->cf->c_latency = v1.val.i;
+	break;
+   */
       default:
 	bug("Invalid static attribute access (%x)", res.type);
       }

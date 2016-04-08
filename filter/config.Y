@@ -287,6 +287,8 @@ CF_KEYWORDS(FUNCTION, PRINT, PRINTN, UNSET, RETURN,
 	ROA_CHECK,
 	EMPTY,
 	FILTER, WHERE, EVAL)
+	
+CF_KEYWORDS(LINK_LATENCY, LINK_BANDWIDTH, LINK_SECURITY)
 
 %nonassoc THEN
 %nonassoc ELSE
@@ -712,11 +714,14 @@ static_attr:
  | NET     { $$ = f_new_inst(); $$->aux = T_PREFIX;     $$->a2.i = SA_NET; }
  | PROTO   { $$ = f_new_inst(); $$->aux = T_STRING;     $$->a2.i = SA_PROTO; }
  | SOURCE  { $$ = f_new_inst(); $$->aux = T_ENUM_RTS;   $$->a2.i = SA_SOURCE; }
- | SCOPE   { $$ = f_new_inst(); $$->aux = T_ENUM_SCOPE; $$->a2.i = SA_SCOPE;	$$->a1.i = 1; }
+ | SCOPE   { $$ = f_new_inst(); $$->aux = T_ENUM_SCOPE; $$->a2.i = SA_SCOPE; $$->a1.i = 1; }
  | CAST    { $$ = f_new_inst(); $$->aux = T_ENUM_RTC;   $$->a2.i = SA_CAST; }
  | DEST    { $$ = f_new_inst(); $$->aux = T_ENUM_RTD;   $$->a2.i = SA_DEST;	$$->a1.i = 1; }
  | IFNAME  { $$ = f_new_inst(); $$->aux = T_STRING;     $$->a2.i = SA_IFNAME; }
  | IFINDEX { $$ = f_new_inst(); $$->aux = T_INT;        $$->a2.i = SA_IFINDEX; }
+ | LINK_LATENCY { $$ = f_new_inst();  $$->aux = T_INT;  $$->a2.i = SA_LATENCY; }
+ | LINK_BANDWIDTH { $$ = f_new_inst();  $$->aux = T_INT;  $$->a2.i = SA_BANDWIDTH; }
+ | LINK_SECURITY { $$ = f_new_inst();  $$->aux = T_INT;  $$->a2.i = SA_SECURITY; }
  ;
 
 term:

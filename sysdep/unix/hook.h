@@ -94,8 +94,6 @@ hook_run (u32 index, void *C, execv_callback add, void* add_data);
 
 #define _BA_AS_PATH BA_AS_PATH
 
-int
-filter_hook_dispatcher (u32 index, void *P, void *RT);
 
 #define BGP_HOOK_IMPORT			0x18
 #define BGP_HOOK_EXPORT			0x19
@@ -103,7 +101,9 @@ filter_hook_dispatcher (u32 index, void *P, void *RT);
 typedef int
 generic_hook_filter (u32 index, void *P, void *RT);
 
+generic_hook_filter filter_hook_dispatcher, bgp_hook_filter;
 
-generic_hook_filter bgp_hook_filter;
+
+#define IS_PROTO_BGP(p)	(p->proto->name[0] == 0x42 && p->proto->name[1] == 0x47)
 
 #endif /* SYSDEP_UNIX_HOOK_H_ */

@@ -15,7 +15,6 @@ bgp_hook_run (unsigned int flags, void *pp, execv_callback add, void *add_data);
 int
 bgp_check_hooks (void *pp);
 
-#include "sysdep/unix/hook.h"
 
 typedef struct glob_hook bgp_hook;
 typedef struct glob_hook_config bgp_hook_config;
@@ -46,9 +45,12 @@ typedef struct glob_hook_config bgp_hook_config;
 //#define BGP_HOOK_IMPORT			0x18
 //#define BGP_HOOK_EXPORT			0x19
 
-
 void
 bgp_handle_invalid_in_conn (u32 index, void *data);
 
+#include "filter/filter.h"
+
+void
+bgp_hook_proc_sa (int w, struct f_val *res, struct rta *rta);
 
 #endif /* PROTO_BGP_HOOK_H_ */

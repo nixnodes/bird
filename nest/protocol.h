@@ -101,6 +101,10 @@ struct proto_config {
   struct proto_limit *in_limit;		/* Limit for importing routes from protocol */
   struct proto_limit *out_limit;	/* Limit for exporting routes to protocol */
 
+  byte link_latency;
+  byte link_bandwidth;
+  byte link_security;
+
   /* Check proto_reconfigure() and proto_copy_config() after changing struct proto_config */
 
   /* Protocol-specific data follow... */
