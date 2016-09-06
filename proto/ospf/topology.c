@@ -278,7 +278,7 @@ ospf_originate_lsa(struct ospf_proto *p, struct ospf_new_lsa *lsa)
   if (!SNODE_VALID(en))
     s_add_tail(&p->lsal, SNODE en);
 
-  if (en->lsa_body == NULL)
+  if (en->nf == NULL || en->lsa_body == NULL)
     en->nf = lsa->nf;
 
   if (en->nf != lsa->nf)
