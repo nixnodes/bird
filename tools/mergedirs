@@ -61,3 +61,16 @@ CONFS=`cd $SRCDIR ; ls conf/*.[chl]`
 for a in $CONFS ; do
 	ln -s $SRCREL/$a $CONFDIR/
 done
+
+if [ -d compat ]; then
+	mkdir -p "${OBJDIR}/compat"
+	cd compat
+	for a in *.[ch]; do
+		ln -sf ../../compat/$a "../${OBJDIR}/compat/$a"
+	done
+	cd ..
+	cat compat/Makefile > "${OBJDIR}/compat/Makefile"
+fi
+
+	
+	

@@ -9,7 +9,7 @@ exedir=@exedir@
 protocols=@protocols@
 static-dirs := nest filter $(addprefix proto/,$(protocols))
 static-dir-paths := $(addprefix $(srcdir)/,$(static-dirs))
-dynamic-dirs := lib conf
+dynamic-dirs := lib conf @compatcdir@
 dynamic-dir-paths := $(dynamic-dirs)
 client-dirs := client
 client-dir-paths := $(client-dirs)
@@ -20,7 +20,7 @@ all-dirs:=$(static-dirs) $(dynamic-dirs) $(client-dirs) $(doc-dirs)
 clean-dirs:=$(all-dirs) proto sysdep
 
 CPPFLAGS=-I$(root-rel) -I$(srcdir) @CPPFLAGS@
-CFLAGS=$(CPPFLAGS) @CFLAGS@
+CFLAGS=$(CPPFLAGS) @CFLAGS@ @COMPAT_FLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 CLIENT_LIBS=@CLIENT_LIBS@

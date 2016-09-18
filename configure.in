@@ -54,6 +54,15 @@ else
 	SUFFIX=""
 fi
 
+if test "$host" = "arm-linux-androideabi"; then
+	compatcdir="compat"
+	compatc_o="compat/all.o"
+	AC_SUBST(compatcdir)
+	AC_SUBST(compatc_o)
+	COMPAT_FLAGS=-DCOMPAT_ENABLED=1
+	AC_SUBST(COMPAT_FLAGS)
+fi
+
 if test "$given_suffix" = yes ; then
    	SUFFIX="$with_suffix"
 fi

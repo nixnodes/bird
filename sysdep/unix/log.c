@@ -56,7 +56,11 @@ static int main_thread_self(void) { return 1; }
 
 
 #ifdef HAVE_SYSLOG
+#ifdef COMPAT_ENABLED
+#include <syslog.h>
+#else
 #include <sys/syslog.h>
+#endif
 
 static int syslog_priorities[] = {
   LOG_DEBUG,

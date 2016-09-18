@@ -652,6 +652,9 @@ CC
 CONTROL_SOCKET
 CONFIG_FILE
 SUFFIX
+COMPAT_FLAGS
+compatc_o
+compatcdir
 runtimedir
 srcdir_rel_mf
 exedir
@@ -2401,6 +2404,15 @@ else
 	SUFFIX=""
 fi
 
+if test "$host" = "arm-linux-androideabi"; then
+	compatcdir="compat"
+	compatc_o="compat/all.o"
+
+
+	COMPAT_FLAGS=-DCOMPAT_ENABLED=1
+
+fi
+
 if test "$given_suffix" = yes ; then
    	SUFFIX="$with_suffix"
 fi
@@ -3104,7 +3116,7 @@ elif test $ac_cv_prog_cc_g = yes; then
   fi
 else
   if test "$GCC" = yes; then
-    CFLAGS= "-O2"
+    CFLAGS="-O2"
   else
     CFLAGS=
   fi

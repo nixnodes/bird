@@ -40,6 +40,10 @@
 #include "lib/unix.h"
 #include "lib/sysio.h"
 
+#ifndef ICMP6_FILTER
+#define ICMP6_FILTER 1
+#endif
+
 /* Maximum number of calls of tx handler for one socket in one
  * select iteration. Should be small enough to not monopolize CPU by
  * one protocol instance.
