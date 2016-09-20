@@ -245,6 +245,7 @@ else: {
 <CCOMM>.
 
 \!\= return NEQ;
+\!\~ return NMA;
 \<\= return LEQ;
 \>\= return GEQ;
 \&\& return AND;
