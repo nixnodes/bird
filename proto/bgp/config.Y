@@ -37,7 +37,7 @@ CF_KEYWORDS(BGP, LOCAL, NEIGHBOR, AS, HOLD, TIME, CONNECT, RETRY,
 	INTERPRET, COMMUNITIES, BGP_ORIGINATOR_ID, BGP_CLUSTER_LIST, IGP,
 	TABLE, GATEWAY, DIRECT, RECURSIVE, MED, TTL, SECURITY, DETERMINISTIC,
 	SECONDARY, ALLOW, BFD, ADD, PATHS, RX, TX, GRACEFUL, RESTART, AWARE,
-	CHECK, LINK, PORT)
+	CHECK, LINK, PORT, SETKEY)
 
 CF_GRAMMAR
 
@@ -66,6 +66,7 @@ bgp_proto_start: proto_start BGP {
      BGP_CFG->gr_time = 120;
      BGP_CFG->c.link_latency = 0;
      BGP_CFG->c.link_bandwidth = 0;
+     BGP_CFG->setkey = 1;
  }
  ;
 
@@ -123,6 +124,7 @@ bgp_proto:
  | bgp_proto CAPABILITIES bool ';' { BGP_CFG->capabilities = $3; }
  | bgp_proto ADVERTISE IPV4 bool ';' { BGP_CFG->advertise_ipv4 = $4; }
  | bgp_proto PASSWORD text ';' { BGP_CFG->password = $3; }
+ | bgp_proto SETKEY bool ';' { BGP_CFG->setkey = $3; }
  | bgp_proto HOOK ESTABLISHED ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_ESTABLISHED, $5, 0 ); }
  | bgp_proto HOOK ESTABLISHED LEAVE text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_LEAVE_ESTABLISHED, $5, 0 ); }
  | bgp_proto HOOK CLOSE ENTER text ';' { BGP_HOOK_PARSEOPT(BGP_HOOK_ENTER_CLOSE, $5, 0 ); }
