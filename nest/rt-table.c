@@ -1405,9 +1405,8 @@ rt_init(void)
 
 
 static int
-rt_prune_step(rtable *tab, int step, int *limit)
+rt_prune_step(rtable *tab, int *limit)
 {
-  static struct tbf rl_flush = TBF_DEFAULT_LOG_LIMITS;
   struct fib_iterator *fit = &tab->prune_fit;
 
   DBG("Pruning route table %s\n", tab->name);
@@ -1432,19 +1431,13 @@ again:
 
     rescan:
       for (e=n->routes; e; e=e->next)
-	if (e->sender->proto->flushing ||
-	    (e->flags & REF_DISCARD) ||
-	    (step && e->attrs->src->proto->flushing))
+	if (e->sender->proto->flushing || (e->flags & REF_DISCARD))
 	  {
 	    if (*limit <= 0)
 	      {
 		FIB_ITERATE_PUT(fit, fn);
 		return 0;
 	      }
-
-	    if (step)
-	      log_rl(&rl_flush, L_WARN "Route %I/%d from %s still in %s after flush",
-		  n->n.prefix, n->n.pxlen, e->attrs->src->proto->name, tab->name);
 
 	    rte_discard(tab, e);
 	    (*limit)--;
@@ -1485,7 +1478,7 @@ static inline int
 rt_prune_table(rtable *tab)
 {
   int limit = 512;
-  return rt_prune_step(tab, 0, &limit);
+  return rt_prune_step(tab, &limit);
 }
 
 /**
@@ -1494,37 +1487,17 @@ rt_prune_table(rtable *tab)
  * The prune loop scans routing tables and removes routes belonging to flushing
  * protocols, discarded routes and also stale network entries. Returns 1 when
  * all such routes are pruned. It is a part of the protocol flushing loop.
- *
- * The prune loop runs in two steps. In the first step it prunes just the routes
- * with flushing senders (in explicitly marked tables) so the route removal is
- * propagated as usual. In the second step, all remaining relevant routes are
- * removed. Ideally, there shouldn't be any, but it happens when pipe filters
- * are changed.
  */
 int
 rt_prune_loop(void)
 {
-  static int step = 0;
   int limit = 512;
   rtable *t;
 
- again:
   WALK_LIST(t, routing_tables)
-    if (! rt_prune_step(t, step, &limit))
+    if (! rt_prune_step(t, &limit))
       return 0;
 
-  if (step == 0)
-    {
-      /* Prepare for the second step */
-      WALK_LIST(t, routing_tables)
-	t->prune_state = RPS_SCHEDULED;
-
-      step = 1;
-      goto again;
-    }
-
-  /* Done */
-  step = 0;
   return 1;
 }
 
