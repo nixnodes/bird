@@ -212,6 +212,7 @@ bug(const char *msg, ...)
 
   va_start(args, msg);
   vlog(L_BUG[0], msg, args);
+  va_end(args);
   abort();
 }
 
@@ -229,6 +230,7 @@ die(const char *msg, ...)
 
   va_start(args, msg);
   vlog(L_FATAL[0], msg, args);
+  va_end(args);
   exit(1);
 }
 
