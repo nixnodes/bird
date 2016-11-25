@@ -430,6 +430,9 @@ bgp_conn_leave_established_state(struct bgp_proto *p)
 
   p->conn = NULL;
 
+  bgp_free_prefix_table(p);
+  bgp_free_bucket_table(p);
+
   if (p->p.proto_state == PS_UP)
     bgp_stop(p, 0);
 
