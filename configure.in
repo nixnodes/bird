@@ -59,7 +59,7 @@ if test "$host" = "arm-linux-androideabi"; then
 	compatc_o="compat/all.o"
 	AC_SUBST(compatcdir)
 	AC_SUBST(compatc_o)
-	COMPAT_FLAGS=-DCOMPAT_ENABLED=1
+	COMPAT_FLAGS="-DCOMPAT_ENABLED=1 -I../compat/"
 	AC_SUBST(COMPAT_FLAGS)
 fi
 
