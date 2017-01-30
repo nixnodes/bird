@@ -5,7 +5,7 @@
  *
  *  gcc -g -O2 -Wall dn42-comgen.c -o dncg -lm
  *
- *  ./dncg -b 100 -e normal -f 1 172.22.0.42
+ *  ./dncg -b100 -e normal -f1 172.22.0.42
  *
  */
 
@@ -19,10 +19,10 @@
 #include <limits.h>
 
 #ifndef PATH_MAX
-#define PATH_MAX 4096
+#define PATH_MAX 		4096
 #endif
 
-#define ICMP_COUNT 4
+#define ICMP_COUNT 		4
 
 #define OF_NORMAL		0
 #define OF_BIRDFILTER		1
@@ -33,21 +33,21 @@
 #define EM_NORMAL		"normal"
 #define EM_PFS			"pfs"
 
-#define USAGE_STR "Usage: %s [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
+#define USAGE_STR 		"Usage: dncg [-64v] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
 
-#define BASE_OPTSTRING	"f:c:e:b:"
+#define BASE_OPTSTRING		"f:c:e:b:64v"
 
 #if _POSIX_C_SOURCE >= 2 || _XOPEN_SOURCE
-#define OPTSTRING 	"-" BASE_OPTSTRING
+#define OPTSTRING 		"-" BASE_OPTSTRING
 #else
-#define OPTSTRING 	BASE_OPTSTRING
+#define OPTSTRING 		BASE_OPTSTRING
 #endif
 
 static int outformat = OF_NORMAL;
 
-#define print_usage fprintf(stderr, USAGE_STR "\n", argv[0])
+#define print_usage fprintf(stderr, USAGE_STR "\n")
 #define handle_ba { print_usage; _exit (1); }
-#define check_anull if ( optarg == NULL ) handle_ba
+#define ba_perror(m,...) { fprintf(stderr, m "\n", ##__VA_ARGS__); handle_ba }
 
 typedef struct encryption_mode
 {
@@ -64,10 +64,13 @@ const static emode emodes[] =
 
 #define EM_COUNT sizeof(emodes) / sizeof(emode)
 
-static double bw = 100;
-static char *sec = EM_NORMAL;
+static double bw = 0.0;
+static char *sec = NULL;
 static char *neigh = NULL;
 static int icmp_count = ICMP_COUNT;
+static int icmpv = 0;
+
+static int verbose = 0;
 
 static int
 isinpath (const char *path, int amode)
@@ -100,7 +103,7 @@ isinpath (const char *path, int amode)
 }
 
 static float
-get_latency (const char *host)
+get_latency (const char *host, int icmpv)
 {
   char *buf = malloc (512);
   size_t cmdlen = strlen (host) + 32;
@@ -109,7 +112,7 @@ get_latency (const char *host)
   char *bin;
   char *proto;
 
-  if (strchr (host, ':'))
+  if (strchr (host, ':') || icmpv == 6)
     {
       if (!isinpath ("ping6", R_OK | X_OK))
 	{
@@ -125,7 +128,10 @@ get_latency (const char *host)
   else
     {
       bin = "ping";
-      proto = "";
+      if (icmpv == 4)
+	proto = "-4";
+      else
+	proto = "";
     }
 
   snprintf (cmd, cmdlen, "%s %s -n -c %d %s", bin, proto, icmp_count, host);
@@ -135,7 +141,7 @@ get_latency (const char *host)
 
   if ((ph = popen (cmd, "r")) == NULL)
     {
-      fprintf (stderr, "unable to run ping: %s", strerror (errno));
+      fprintf (stderr, "unable to run %s: %s", bin, strerror (errno));
       result = -1.0;
       goto cleanup;
     }
@@ -149,6 +155,9 @@ get_latency (const char *host)
       tof = strstr (buf, "time=");
       if (tof)
 	{
+	  if (verbose)
+	    fputs (buf, stderr);
+
 	  errno = 0;
 	  result += strtof (tof + 5, NULL);
 	  if (!(errno == EINVAL || errno == ERANGE))
@@ -180,32 +189,35 @@ parse_opts (int argc, char **argv)
       switch (opt)
 	{
 	case 'b':
-	  check_anull
 	  bw = strtod (optarg, NULL);
 	  if ( errno == EINVAL)
 	    {
-	      fprintf (stderr, "invalid bandwith option\n");
-	      return 1;
+	      ba_perror("invalid bandwith option");
 	    }
-	  if (bw <= (double) 0 || errno == ERANGE)
+	  if (errno == ERANGE)
 	    {
-	      fprintf (stderr, "bandwidth value out of range\n");
-	      return 1;
+	      ba_perror("bandwidth value out of range");
 	    }
 	  break;
 	case 'e':
-	  check_anull
 	  sec = optarg;
 	  break;
 	case 'c':
-	  check_anull
 	  icmp_count = atoi (optarg);
 	  if (icmp_count <= 0)
 	    icmp_count = ICMP_COUNT;
 	  break;
 	case 'f':
-	  check_anull
 	  outformat = atoi (optarg);
+	  break;
+	case '6':
+	  icmpv = 6;
+	  break;
+	case '4':
+	  icmpv = 4;
+	  break;
+	case 'v':
+	  verbose = 1;
 	  break;
 	case 1:
 	  neigh = optarg;
@@ -229,59 +241,70 @@ find_sm_code (char *mode)
 
   while (i--)
     {
-      if (!strcmp (emodes[i].mode, sec))
+      if (!strcmp (emodes[i].mode, mode))
 	return emodes[i].code;
     }
 
   return -1;
 }
 
-int
-main (int argc, char *argv[])
+static void
+check_options (void)
 {
-  if (argc == 1)
-    handle_ba
+  if (bw <= (double) 0)
+    {
+      ba_perror("missing or invalid bandwidth option");
+    }
 
-  parse_opts (argc, argv);
+  if (sec == NULL)
+    {
+      ba_perror("missing encryption option");
+    }
 
   if (neigh == NULL || !strlen (neigh))
     {
-      fprintf (stderr, "missing host address\n");
-      handle_ba
+      ba_perror("missing host address");
     }
+}
 
+static int
+calc_security (char *sv)
+{
   int com_security;
 
-  if ((com_security = find_sm_code (sec)) == -1)
+  if ((com_security = find_sm_code (sv)) == -1)
     {
-      fprintf (stderr, "invalid encryption specifier: %s\n", sec);
-      handle_ba
+      ba_perror("invalid encryption specifier: %s", sv);
     }
 
-  float latency = get_latency (neigh);
+  return com_security;
+}
 
-  if (latency == -1.0)
-    {
-      fprintf (stderr, "icmp failed: %s\n", neigh);
-      if (outformat == OF_BIRDFILTER)
-	_exit (1);
-    }
-
-  fprintf (
-      stderr,
-      "# neighbor: %s, latency: %.3f ms, bandwidth: %.1f mbps, security: %s\n",
-      neigh, latency, bw, sec);
-
+static int
+calc_bandwidth (double bw)
+{
   int com_bandwidth = bw < 1.0 ? 21 : 20 + (int) log10 (bw) + 2;
 
   if (com_bandwidth > 29)
     com_bandwidth = 29;
 
+  return com_bandwidth;
+}
+
+static int
+calc_latency (float latency)
+{
   int com_latency = (int) ceil (logf (latency <= (float) 1 ? 1.1 : latency));
 
   if (com_latency > 9)
     com_latency = 9;
 
+  return com_latency;
+}
+
+static void
+spew (float latency, int com_latency, int com_bandwidth, int com_security)
+{
   switch (outformat)
     {
     case OF_BIRDFILTER:
@@ -302,6 +325,37 @@ main (int argc, char *argv[])
       printf ("%s %d %d %d\n", neigh, latency == -1.0 ? -1 : com_latency,
 	      com_bandwidth, com_security);
     }
+}
+
+int
+main (int argc, char *argv[])
+{
+  if (argc == 1)
+    handle_ba
+
+  parse_opts (argc, argv);
+  check_options ();
+
+  int com_security = calc_security (sec);
+
+  float latency = get_latency (neigh, icmpv);
+
+  if (latency == -1.0)
+    {
+      fprintf (stderr, "icmp failed: %s\n", neigh);
+      if (outformat == OF_BIRDFILTER)
+	_exit (1);
+    }
+
+  fprintf (
+      stderr,
+      "# neighbor: %s, average rtt: %.3f ms, bandwidth: %.1f mbps, security: %s\n",
+      neigh, latency, bw, sec);
+
+  int com_latency = calc_latency (latency);
+  int com_bandwidth = calc_bandwidth (bw);
+
+  spew (latency, com_latency, com_bandwidth, com_security);
 
   exit (0);
 }
