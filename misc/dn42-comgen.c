@@ -33,9 +33,9 @@
 #define EM_NORMAL		"normal"
 #define EM_PFS			"pfs"
 
-#define USAGE_STR 		"Usage: dncg [-64v] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
+#define USAGE_STR 		"Usage: dncg [-64vs] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
 
-#define BASE_OPTSTRING		"f:c:e:b:64v"
+#define BASE_OPTSTRING		"f:c:e:b:64vs"
 
 #if _POSIX_C_SOURCE >= 2 || _XOPEN_SOURCE
 #define OPTSTRING 		"-" BASE_OPTSTRING
@@ -69,6 +69,7 @@ static char *sec = NULL;
 static char *neigh = NULL;
 static int icmp_count = ICMP_COUNT;
 static int icmpv = 0;
+static int strict = 0;
 
 static int verbose = 0;
 
@@ -224,6 +225,9 @@ parse_opts (int argc, char **argv)
 	case 'v':
 	  verbose = 1;
 	  break;
+	case 's':
+	  strict = 1;
+	  break;
 	case 1:
 	  neigh = optarg;
 	  break;
@@ -348,7 +352,7 @@ main (int argc, char *argv[])
   if (latency == -1.0)
     {
       fprintf (stderr, "icmp failed: %s\n", neigh);
-      if (outformat == OF_BIRDFILTER)
+      if (outformat == OF_BIRDFILTER || strict)
 	_exit (1);
     }
 
