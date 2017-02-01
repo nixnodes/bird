@@ -33,9 +33,9 @@
 #define EM_NORMAL		"normal"
 #define EM_PFS			"pfs"
 
-#define USAGE_STR 		"Usage: dncg [-64vs] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
+#define USAGE_STR 		"Usage: dncg [-64vs] [-I <interface>] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
 
-#define BASE_OPTSTRING		"f:c:e:b:64vs"
+#define BASE_OPTSTRING		"I:f:c:e:b:64vs"
 
 #if _POSIX_C_SOURCE >= 2 || _XOPEN_SOURCE
 #define OPTSTRING 		"-" BASE_OPTSTRING
@@ -67,6 +67,7 @@ const static emode emodes[] =
 static double bw = 0.0;
 static char *sec = NULL;
 static char *neigh = NULL;
+static char *interface = NULL;
 static int icmp_count = ICMP_COUNT;
 static int icmpv = 0;
 static int strict = 0;
@@ -111,6 +112,12 @@ get_latency (const char *host, int icmpv)
 
   char *bin;
   char *proto;
+  char iface[64];
+
+  if (interface)
+    snprintf (iface, sizeof(iface), "-I %s", interface);
+  else
+    iface[0] = 0;
 
   if (strchr (host, ':') || icmpv == 6)
     {
@@ -134,7 +141,8 @@ get_latency (const char *host, int icmpv)
 	proto = "";
     }
 
-  snprintf (cmd, cmdlen, "%s %s -n -c %d %s", bin, proto, icmp_count, host);
+  snprintf (cmd, cmdlen, "%s %s %s -n -c %d %s", bin, proto, iface, icmp_count,
+	    host);
 
   FILE *ph;
   float result;
@@ -227,6 +235,9 @@ parse_opts (int argc, char **argv)
 	  break;
 	case 's':
 	  strict = 1;
+	  break;
+	case 'I':
+	  interface = optarg;
 	  break;
 	case 1:
 	  neigh = optarg;
