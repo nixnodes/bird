@@ -105,7 +105,6 @@ isinpath (const char *path, int amode)
 static float
 get_latency (const char *host, int icmpv)
 {
-  char *buf = malloc (512);
   size_t cmdlen = strlen (host) + 32;
   char *cmd = malloc (cmdlen + 1);
 
@@ -149,6 +148,7 @@ get_latency (const char *host, int icmpv)
   char *tof;
   result = 0.0;
   int ok = 0;
+  char *buf = malloc (512);
 
   while (fgets (buf, 512, ph))
     {
@@ -160,10 +160,16 @@ get_latency (const char *host, int icmpv)
 
 	  errno = 0;
 	  result += strtof (tof + 5, NULL);
-	  if (!(errno == EINVAL || errno == ERANGE))
-	    ok = 1;
+	  if (errno == ERANGE)
+	    {
+	      ok = 0;
+	      break;
+	    }
+	  ok = 1;
 	}
     }
+
+  free (buf);
 
   if (!ok)
     result = -1.0;
@@ -175,7 +181,6 @@ get_latency (const char *host, int icmpv)
   cleanup: ;
 
   free (cmd);
-  free (buf);
 
   return result;
 }
