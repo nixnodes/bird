@@ -107,8 +107,8 @@ isinpath (const char *path, int amode)
 static float
 get_latency (const char *host, int icmpv)
 {
-  size_t cmdlen = strlen (host) + 32;
-  char *cmd = malloc (cmdlen + 1);
+  size_t max_cmdlen = strlen (host) + 1024;
+  char *cmd = malloc (max_cmdlen + 1);
 
   char *bin;
   char *proto;
@@ -141,8 +141,8 @@ get_latency (const char *host, int icmpv)
 	proto = "";
     }
 
-  snprintf (cmd, cmdlen, "%s %s %s -n -c %d %s", bin, proto, iface, icmp_count,
-	    host);
+  snprintf (cmd, max_cmdlen, "%s %s %s -n -c %d %s", bin, proto, iface,
+	    icmp_count, host);
 
   FILE *ph;
   float result;
@@ -305,10 +305,7 @@ calc_bandwidth (double bw)
 {
   int com_bandwidth = bw < 1.0 ? 21 : 20 + (int) log10 (bw) + 2;
 
-  if (com_bandwidth > 29)
-    com_bandwidth = 29;
-
-  return com_bandwidth;
+  return com_bandwidth > 29 ? 29 : com_bandwidth;
 }
 
 static int
@@ -316,10 +313,7 @@ calc_latency (float latency)
 {
   int com_latency = (int) ceil (logf (latency <= (float) 1 ? 1.1 : latency));
 
-  if (com_latency > 9)
-    com_latency = 9;
-
-  return com_latency;
+  return com_latency > 9 ? 9 : com_latency;
 }
 
 static void
