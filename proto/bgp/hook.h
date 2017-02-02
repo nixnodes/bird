@@ -15,7 +15,6 @@ bgp_hook_run (unsigned int flags, void *pp, execv_callback add, void *add_data);
 int
 bgp_check_hooks (void *pp);
 
-
 typedef struct glob_hook bgp_hook;
 typedef struct glob_hook_config bgp_hook_config;
 
@@ -51,6 +50,8 @@ bgp_handle_invalid_in_conn (u32 index, void *data);
 #include "filter/filter.h"
 
 void
-bgp_hook_proc_sa (int w, struct f_val *res, struct rta *rta);
+bgp_proc_sa_ras (struct f_val *res, struct proto *P);
+void
+bgp_proc_sa_las (struct f_val *res, struct proto *P);
 
 #endif /* PROTO_BGP_HOOK_H_ */

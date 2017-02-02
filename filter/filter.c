@@ -471,6 +471,7 @@ val_format(struct f_val v, buffer *buf)
 }
 
 static struct rte **f_rte;
+static struct proto *f_eproto;
 static struct rta *f_old_rta;
 static struct ea_list **f_tmp_attrs;
 static struct linpool *f_pool;
@@ -823,17 +824,18 @@ interpret(struct f_inst *what)
       case SA_NET:	res.val.px.ip = (*f_rte)->net->n.prefix;
 			res.val.px.len = (*f_rte)->net->n.pxlen; break;
       case SA_PROTO:	res.val.s = rta->src->proto->name; break;
+      case SA_EXPROTO:	res.val.s = f_eproto ? f_eproto->name : ""; break;
       case SA_SOURCE:	res.val.i = rta->source; break;
       case SA_SCOPE:	res.val.i = rta->scope; break;
       case SA_CAST:	res.val.i = rta->cast; break;
       case SA_DEST:	res.val.i = rta->dest; break;
       case SA_IFNAME:	res.val.s = rta->iface ? rta->iface->name : ""; break;
       case SA_IFINDEX:	res.val.i = rta->iface ? rta->iface->index : 0; break;
-      case SA_LATENCY:	res.val.i = (uint)rta->src->proto->cf->link_latency; break;
-      case SA_BANDWIDTH: res.val.i = (uint)rta->src->proto->cf->link_bandwidth; break;
-      case SA_SECURITY: res.val.i = (uint)rta->src->proto->cf->link_security; break;
-      case SA_REMOTE_AS: bgp_hook_proc_sa(1, &res, rta ); break;
-      case SA_LOCAL_AS: bgp_hook_proc_sa(2, &res, rta ); break;
+      case SA_LATENCY:	res.val.i = f_eproto ? f_eproto->cf->link_latency : (uint)rta->src->proto->cf->link_latency; break;
+      case SA_BANDWIDTH:res.val.i = f_eproto ? f_eproto->cf->link_bandwidth : (uint)rta->src->proto->cf->link_bandwidth; break;
+      case SA_SECURITY:	res.val.i = f_eproto ? f_eproto->cf->link_security : (uint)rta->src->proto->cf->link_security; break;
+      case SA_REMOTE_AS:bgp_proc_sa_ras(&res, f_eproto ? f_eproto : rta->src->proto ); break;
+      case SA_LOCAL_AS:	bgp_proc_sa_las(&res, f_eproto ? f_eproto : rta->src->proto ); break;
 
       default:
 	bug("Invalid static attribute access (%x)", res.type);
@@ -1487,7 +1489,7 @@ i_same(struct f_inst *f1, struct f_inst *f2)
  * modified in place, old cached rta is possibly freed.
  */
 int
-f_run(struct filter *filter, struct rte **rte, struct ea_list **tmp_attrs, struct linpool *tmp_pool, int flags)
+f_run(struct filter *filter, struct rte **rte, struct ea_list **tmp_attrs, struct linpool *tmp_pool, int flags, void *f_exa)
 {
   if (filter == FILTER_ACCEPT)
     return F_ACCEPT;
@@ -1499,6 +1501,7 @@ f_run(struct filter *filter, struct rte **rte, struct ea_list **tmp_attrs, struc
   DBG( "Running filter `%s'...", filter->name );
 
   f_rte = rte;
+  f_eproto = (struct proto*) f_exa;
   f_old_rta = NULL;
   f_tmp_attrs = tmp_attrs;
   f_pool = tmp_pool;
@@ -1507,6 +1510,8 @@ f_run(struct filter *filter, struct rte **rte, struct ea_list **tmp_attrs, struc
   LOG_BUFFER_INIT(f_buf);
 
   struct f_val res = interpret(filter->root);
+
+  f_eproto = NULL;
 
   if (f_old_rta) {
     /*

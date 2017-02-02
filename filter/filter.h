@@ -106,7 +106,7 @@ trie_match_fprefix(struct f_trie *t, struct f_prefix *px)
 struct ea_list;
 struct rte;
 
-int f_run(struct filter *filter, struct rte **rte, struct ea_list **tmp_attrs, struct linpool *tmp_pool, int flags);
+int f_run(struct filter *filter, struct rte **rte, struct ea_list **tmp_attrs, struct linpool *tmp_pool, int flags, void *f_exa);
 struct f_val f_eval(struct f_inst *expr, struct linpool *tmp_pool);
 uint f_eval_int(struct f_inst *expr);
 u32 f_eval_asn(struct f_inst *expr);
@@ -188,8 +188,9 @@ void val_format(struct f_val v, buffer *buf);
 #define SA_LATENCY    	11
 #define SA_BANDWIDTH	12
 #define SA_SECURITY	13
-#define SA_REMOTE_AS   	14
-#define SA_LOCAL_AS    	15
+#define SA_REMOTE_AS	14
+#define SA_LOCAL_AS	15
+#define SA_EXPROTO	16
 
 
 struct f_tree {

@@ -8,7 +8,6 @@
 #include "lib/socket.h"
 #include "nest/attrs.h"
 
-
 #include "hook.h"
 
 #include <stdio.h>
@@ -264,24 +263,13 @@ bgp_hook_filter (u32 index, void *P, void *RT)
 }
 
 void
-bgp_hook_proc_sa (int w, struct f_val *res, struct rta *rta)
+bgp_proc_sa_ras (struct f_val *res, struct proto *P)
 {
-  struct proto *P = rta->src->proto;
-  if (IS_PROTO_BGP (P))
-    {
-      struct bgp_proto *p = (struct bgp_proto *) P;
+  res->val.i = IS_PROTO_BGP(P) ? (uint) ((struct bgp_proto *) P)->cf->remote_as : 0;
+}
 
-      if (w == 1)
-	{
-	  res->val.i = (uint) p->cf->remote_as;
-	}
-      else if (w == 2)
-	{
-	  res->val.i = (uint) p->cf->local_as;
-	}
-    }
-  else
-    {
-      res->val.i = 0;
-    }
+void
+bgp_proc_sa_las (struct f_val *res, struct proto *P)
+{
+  res->val.i = IS_PROTO_BGP(P) ? (uint) ((struct bgp_proto *) P)->cf->local_as : 0;
 }

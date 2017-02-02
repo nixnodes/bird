@@ -231,7 +231,8 @@ export_filter(struct announce_hook *ah, rte *rt0, rte **rt_free, ea_list **tmpa,
     }
 
   v = filter && ((filter == FILTER_REJECT) ||
-		 (f_run(filter, &rt, tmpa, rte_update_pool, FF_FORCE_TMPATTR) > F_ACCEPT));
+		 (f_run(filter, &rt, tmpa, rte_update_pool, FF_FORCE_TMPATTR, p) > F_ACCEPT));
+
   if (v)
     {
       if (silent)
@@ -242,7 +243,7 @@ export_filter(struct announce_hook *ah, rte *rt0, rte **rt_free, ea_list **tmpa,
       goto reject;
     }
 
-  if ( filter_hook_dispatcher(BGP_HOOK_EXPORT, p, rt0) & HOOK_STATUS_BAD )
+  if ( filter_hook_dispatcher(BGP_HOOK_EXPORT, p, rt) & HOOK_STATUS_BAD )
     {
       goto reject;
     }
@@ -1038,7 +1039,7 @@ rte_update2(struct announce_hook *ah, net *net, rte *new, struct rte_src *src)
 	  if (filter && (filter != FILTER_REJECT))
 	    {
 	      ea_list *old_tmpa = tmpa;
-	      int fr = f_run(filter, &new, &tmpa, rte_update_pool, 0);
+	      int fr = f_run(filter, &new, &tmpa, rte_update_pool, 0, NULL);
 	      if (fr > F_ACCEPT)
 		{
 		  stats->imp_updates_filtered++;
@@ -1130,7 +1131,7 @@ rt_examine(rtable *t, ip_addr prefix, int pxlen, struct proto *p, struct filter 
   ea_list *tmpa = make_tmp_attrs(rt, rte_update_pool);
   int v = p->import_control ? p->import_control(p, &rt, &tmpa, rte_update_pool) : 0;
   if (v == RIC_PROCESS)
-    v = (f_run(filter, &rt, &tmpa, rte_update_pool, FF_FORCE_TMPATTR) <= F_ACCEPT);
+    v = (f_run(filter, &rt, &tmpa, rte_update_pool, FF_FORCE_TMPATTR, NULL) <= F_ACCEPT);
 
    /* Discard temporary rte */
   if (rt != n->routes)
@@ -2307,7 +2308,7 @@ rt_show_net(struct cli *c, net *n, struct rt_show_data *d)
 	       * command may change the export filter and do not update routes.
 	       */
 	      int do_export = (ic > 0) ||
-		(f_run(a->out_filter, &e, &tmpa, rte_update_pool, FF_FORCE_TMPATTR) <= F_ACCEPT);
+		(f_run(a->out_filter, &e, &tmpa, rte_update_pool, FF_FORCE_TMPATTR, ep) <= F_ACCEPT);
 
 	      if (do_export != (d->export_mode == RSEM_EXPORT))
 		goto skip;
@@ -2320,7 +2321,7 @@ rt_show_net(struct cli *c, net *n, struct rt_show_data *d)
       if (d->show_protocol && (d->show_protocol != e->attrs->src->proto))
 	goto skip;
 
-      if (f_run(d->filter, &e, &tmpa, rte_update_pool, FF_FORCE_TMPATTR) > F_ACCEPT)
+      if (f_run(d->filter, &e, &tmpa, rte_update_pool, FF_FORCE_TMPATTR, NULL) > F_ACCEPT)
 	goto skip;
 
       d->show_counter++;

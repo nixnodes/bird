@@ -708,7 +708,7 @@ krt_export_rte(struct krt_proto *p, rte **new, ea_list **tmpa)
 
   struct proto *src = (*new)->attrs->src->proto;
   *tmpa = src->make_tmp_attrs ? src->make_tmp_attrs(*new, krt_filter_lp) : NULL;
-  return f_run(filter, new, tmpa, krt_filter_lp, FF_FORCE_TMPATTR) <= F_ACCEPT;
+  return f_run(filter, new, tmpa, krt_filter_lp, FF_FORCE_TMPATTR, &p->p) <= F_ACCEPT;
 }
 
 static void
