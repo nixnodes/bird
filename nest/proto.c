@@ -453,6 +453,15 @@ proto_reconfigure(struct proto *p, struct proto_config *oc, struct proto_config 
   int import_changed = ! filter_same(nc->in_filter, oc->in_filter);
   int export_changed = ! filter_same(nc->out_filter, oc->out_filter);
 
+  /* Change in link settings triggers import/export */
+  if ( nc->link_bandwidth != oc->link_bandwidth ||
+      nc->link_latency != oc->link_latency ||
+      nc->link_security != oc->link_security)
+    {
+      import_changed = 1;
+      export_changed = 1;
+    }
+
   /* We treat a change in preferences by reimporting routes */
   if (nc->preference != oc->preference)
     import_changed = 1;
