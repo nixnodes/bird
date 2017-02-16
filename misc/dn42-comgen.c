@@ -22,6 +22,7 @@
 #define PATH_MAX 		4096
 #endif
 
+#define ICMP_SKIP 		1
 #define ICMP_COUNT 		4
 
 #define OF_NORMAL		0
@@ -33,9 +34,10 @@
 #define EM_NORMAL		"normal"
 #define EM_PFS			"pfs"
 
-#define USAGE_STR 		"Usage: dncg [-64vs] [-I <interface>] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>] [-c <icmp count>] [-f <0|1|2>] host"
+#define USAGE_STR 		"Usage: dncg [-64vs] [-I <interface>] [-b <bandwidth(mbps)>] [-e <none|unsafe|normal|pfs>]\n" \
+				"            [-c <icmp count>] [-S <icmp ignore count>] [-f <0|1|2>] host"
 
-#define BASE_OPTSTRING		"I:f:c:e:b:64vs"
+#define BASE_OPTSTRING		"S:I:f:c:e:b:64vs"
 
 #if _POSIX_C_SOURCE >= 2 || _XOPEN_SOURCE
 #define OPTSTRING 		"-" BASE_OPTSTRING
@@ -68,6 +70,7 @@ static double bw = 0.0;
 static char *sec = NULL;
 static char *neigh = NULL;
 static char *interface = NULL;
+static int icmp_skip = ICMP_SKIP;
 static int icmp_count = ICMP_COUNT;
 static int icmpv = 0;
 static int strict = 0;
@@ -142,14 +145,14 @@ get_latency (const char *host, int icmpv)
     }
 
   snprintf (cmd, max_cmdlen, "%s %s %s -n -c %d %s", bin, proto, iface,
-	    icmp_count, host);
+	    icmp_count + icmp_skip, host);
 
   FILE *ph;
   float result;
 
   if ((ph = popen (cmd, "r")) == NULL)
     {
-      fprintf (stderr, "unable to run %s: %s", bin, strerror (errno));
+      fprintf (stderr, "unable to run %s: %s\n", bin, strerror (errno));
       result = -1.0;
       goto cleanup;
     }
@@ -166,6 +169,14 @@ get_latency (const char *host, int icmpv)
 	{
 	  if (verbose)
 	    fputs (buf, stderr);
+
+	  if (icmp_skip > 0)
+	    {
+	      if (verbose == 2)
+		fprintf (stderr, "ignoring last result (%d)\n", icmp_skip);
+	      icmp_skip--;
+	      continue;
+	    }
 
 	  errno = 0;
 	  result += strtof (tof + 5, NULL);
@@ -221,6 +232,9 @@ parse_opts (int argc, char **argv)
 	  if (icmp_count <= 0)
 	    icmp_count = ICMP_COUNT;
 	  break;
+	case 'S':
+	  icmp_skip = atoi (optarg);
+	  break;
 	case 'f':
 	  outformat = atoi (optarg);
 	  break;
@@ -231,7 +245,7 @@ parse_opts (int argc, char **argv)
 	  icmpv = 4;
 	  break;
 	case 'v':
-	  verbose = 1;
+	  verbose++;
 	  break;
 	case 's':
 	  strict = 1;
