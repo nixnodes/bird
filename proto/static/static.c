@@ -406,6 +406,14 @@ static_same_dest(struct static_route *x, struct static_route *y)
     }
 }
 
+static inline int
+static_same_rte(struct static_route *x, struct static_route *y)
+{
+  /* Note that i_same() requires arguments in (new, old) order */
+  return static_same_dest(x, y) && i_same(y->cmds, x->cmds);
+}
+
+
 static void
 static_match(struct proto *p, struct static_route *r, struct static_config *n)
 {
